@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUser } from "../Context";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../Firebase";
@@ -65,6 +65,7 @@ export default function SectionOrderInfo() {
         setItems(prev => prev.map(it => it.id === id ? { ...it, enabled: !it.enabled } : it));
     };
 
+    // ── Mouse / pointer drag ──
     const onDragStart = (i) => setDragIdx(i);
     const onDragOver  = (e, i) => { e.preventDefault(); setOverIdx(i); };
     const onDrop      = (i) => {
@@ -76,6 +77,45 @@ export default function SectionOrderInfo() {
         setDragIdx(null); setOverIdx(null);
     };
     const onDragEnd = () => { setDragIdx(null); setOverIdx(null); };
+
+    // ── Touch drag ──
+    const touchFrom = useRef(null);
+    const touchOver = useRef(null);
+    const listRef   = useRef(null);
+
+    const onTouchStart = (e, i) => {
+        touchFrom.current = i;
+        touchOver.current = i;
+        setDragIdx(i);
+    };
+
+    const onTouchMove = (e) => {
+        if (touchFrom.current === null) return;
+        const touch = e.touches[0];
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        const row = el?.closest('[data-row]');
+        if (!row) return;
+        const idx = parseInt(row.dataset.row, 10);
+        if (!isNaN(idx) && idx !== touchOver.current) {
+            touchOver.current = idx;
+            setOverIdx(idx);
+        }
+    };
+
+    const onTouchEnd = () => {
+        const from = touchFrom.current;
+        const to   = touchOver.current;
+        if (from !== null && to !== null && from !== to) {
+            const next = [...items];
+            const [moved] = next.splice(from, 1);
+            next.splice(to, 0, moved);
+            setItems(next);
+        }
+        touchFrom.current = null;
+        touchOver.current = null;
+        setDragIdx(null);
+        setOverIdx(null);
+    };
 
     const handleSave = async () => {
         setSaving(true);
@@ -113,24 +153,26 @@ export default function SectionOrderInfo() {
                     Drag any section (standard or custom) to set the exact nav order. Toggle to show/hide.
                 </p>
 
-                <div className="flex flex-col gap-2 mb-5">
+                <div ref={listRef} className="flex flex-col gap-2 mb-5" onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
                     {items.map((item, i) => {
                         const pos = item.enabled ? ++posCounter : null;
                         return (
                             <div
                                 key={item.id}
+                                data-row={i}
                                 draggable
                                 onDragStart={() => onDragStart(i)}
                                 onDragOver={e => onDragOver(e, i)}
                                 onDrop={() => onDrop(i)}
                                 onDragEnd={onDragEnd}
+                                onTouchStart={e => onTouchStart(e, i)}
                                 className={`flex items-center gap-4 px-4 py-3 rounded-xl border transition-all duration-150 cursor-grab active:cursor-grabbing select-none
                                     ${dragIdx === i ? 'opacity-40 scale-95' : 'opacity-100'}
                                     ${overIdx === i ? 'border-purple-400 bg-purple-50 shadow-md'
                                         : item.enabled ? 'border-purple-200 bg-white shadow-sm'
                                         : 'border-gray-200 bg-gray-50/50'}`}
                             >
-                                {/* drag handle */}
+                                {/* Drag handle */}
                                 <div className="flex flex-col gap-[3px] flex-shrink-0 opacity-30">
                                     <div className="w-4 h-0.5 bg-gray-500 rounded" />
                                     <div className="w-4 h-0.5 bg-gray-500 rounded" />

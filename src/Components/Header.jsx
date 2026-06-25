@@ -90,7 +90,7 @@ export default function Header() {
 
                 {/* Mobile Dropdown */}
                 {menuOpen && (
-                    <div className="sm:hidden absolute top-full right-0 left-0 bg-white/98 backdrop-blur-md shadow-lg border-b border-purple-100 p-4 flex flex-col gap-2 z-50">
+                    <div className="sm:hidden absolute top-full right-0 left-0 bg-white shadow-lg border-b border-purple-100 p-4 flex flex-col gap-2 z-50">
                         {user ? (
                             <>
                                 <p className="text-sm text-gray-500 font-medium px-2 pb-1 border-b border-gray-100">{user.name}</p>

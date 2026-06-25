@@ -69,7 +69,7 @@ export default function UserInfo() {
     };
 
     return (
-        <main className="flex font-[raleway] relative max-w-screen-xl mx-auto">
+        <main className="flex flex-col sm:flex-row font-[raleway] relative max-w-screen-xl mx-auto">
 
             {/* ── Mobile Sidebar Toggle ── */}
             <div className="sm:hidden px-5 pt-5 pb-2 w-full">

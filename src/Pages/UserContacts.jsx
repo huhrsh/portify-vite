@@ -21,7 +21,7 @@ export default function UserContacts() {
                 {contacts.map((contact, index) => (
                         <Link target="_blank" key={index} to={(contact.label==='Phone' && 'tel:'+contact.value) || (contact.label==='Email' && 'mailto:'+contact.value) || contact.value} className="group contact-div">
                             <h3 className="contact-label">{contact.label} </h3>
-                            <p className="w-0 group-hover:pl-4 group-hover:w-full contact-data text-ellipsis max-sm:max-w-96">{contact.value}</p>
+                            <p className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-sm group-hover:pl-3 contact-data max-sm:max-w-xs max-sm:pl-3">{contact.value}</p>
                             <span className="dash">|</span>
                         </Link>
 
