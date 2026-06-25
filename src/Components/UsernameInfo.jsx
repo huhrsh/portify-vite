@@ -5,10 +5,13 @@ import { db } from "../Firebase"
 import { toast } from "react-toastify"
 import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore"
 
+const RESERVED = ['no-user', 'dashboard', 'sign-in', 'sign-up', 'admin-dashboard', 'forgot-password'];
+
 export default function UsernameInfo() {
     const usernameRef = createRef()
     const { user, setUser, setLoading } = useUser()
     const [username, setUsername] = useState("")
+    const [availability, setAvailability] = useState(null); // null | 'checking' | 'available' | 'taken' | 'reserved' | 'invalid' | 'same'
     const [selectedSections, setSelectedSections] = useState({
         education: true,
         experience: true,
@@ -34,6 +37,23 @@ export default function UsernameInfo() {
     }, [user])
 
 
+    const checkAvailability = async () => {
+        const val = username.toLowerCase();
+        if (!val) { setAvailability('invalid'); return; }
+        if (val === user.username) { setAvailability('same'); return; }
+        if (RESERVED.includes(val)) { setAvailability('reserved'); return; }
+        const regex = /^[a-z0-9-_]+$/;
+        if (!regex.test(val)) { setAvailability('invalid'); return; }
+        setAvailability('checking');
+        try {
+            const q = query(collection(db, 'users'), where('username', '==', val));
+            const snap = await getDocs(q);
+            setAvailability(snap.empty ? 'available' : 'taken');
+        } catch {
+            setAvailability(null);
+        }
+    };
+
     const handleSectionCheckboxChange = (section) => {
         setSelectedSections(prevState => ({
             ...prevState,
@@ -46,6 +66,10 @@ export default function UsernameInfo() {
         usernameRef.current.blur()
         if (!username) {
             toast.warn("Username cannot be blank.")
+            return;
+        }
+        if (RESERVED.includes(username.toLowerCase())) {
+            toast.warn("That username is reserved. Please choose a different one.");
             return;
         }
         // console.log(user.selectedSections)
@@ -94,12 +118,43 @@ export default function UsernameInfo() {
     return (
         <section className="font-[raleway] flex flex-col gap-4">
             <h2 className='text-purple-700 text-3xl max-sm:text-2xl font-bold'>Get yourself a unique username</h2>
-            <form className="flex pr-12 max-sm:pr-0 gap-6 items-center mb-2">
-                <div className='border hover:shadow-lg focus-within:shadow-lg  group p-3 py-0 rounded-xl transition-all duration-200 flex w-full gap-3 items-center'>
-                    <h2 className=' text-purple-700 text-lg font-medium'>Username:</h2>
-                    <input ref={usernameRef} className='outline-none w-full h-full px-2 py-4 font-medium text-gray-600' type='text' placeholder='johnDoe' onChange={((e) => setUsername(e.target.value))} value={username} />
+            <div className="flex flex-col gap-2 pr-12 max-sm:pr-0 mb-2">
+                <div className="flex gap-3 items-center">
+                    <div className='border hover:shadow-lg focus-within:shadow-lg group p-3 py-0 rounded-xl transition-all duration-200 flex flex-1 gap-3 items-center'>
+                        <h2 className='text-purple-700 text-lg font-medium'>Username:</h2>
+                        <input
+                            ref={usernameRef}
+                            className='outline-none w-full h-full px-2 py-4 font-medium text-gray-600'
+                            type='text'
+                            placeholder='johnDoe'
+                            onChange={e => { setUsername(e.target.value); setAvailability(null); }}
+                            value={username}
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        onClick={checkAvailability}
+                        disabled={availability === 'checking'}
+                        className="flex-shrink-0 px-4 py-2.5 rounded-xl border border-purple-200 text-sm font-semibold text-purple-700 hover:bg-purple-50 transition-all duration-150 disabled:opacity-50"
+                    >
+                        {availability === 'checking' ? 'Checking…' : 'Check'}
+                    </button>
                 </div>
-            </form>
+
+                {availability && availability !== 'checking' && (
+                    <p className={`text-sm font-semibold px-1 ${
+                        availability === 'available' ? 'text-emerald-600' :
+                        availability === 'same'      ? 'text-sky-600' :
+                        'text-rose-500'
+                    }`}>
+                        {availability === 'available' ? '✓ Username is available!' :
+                         availability === 'taken'     ? '✗ Username is already taken.' :
+                         availability === 'reserved'  ? '✗ That username is reserved.' :
+                         availability === 'same'      ? '✓ This is your current username.' :
+                         '✗ Invalid username — use only a-z, 0-9, - or _'}
+                    </p>
+                )}
+            </div>
             <section className="shadow shadow-purple-200 border rounded-xl p-4 mr-12 max-sm:m-0 bg-purple-50">
                 <h3 className="text-2xl max-sm:text-xl max-sm:mb-4 font-bold text-gray-600">Points to remember when choosing a username</h3>
                 <ul>
