@@ -1,9 +1,20 @@
 import { useEffect, useState } from "react";
-import { db, storage } from "../Firebase";
+import { db } from "../Firebase";
 import { useUser } from "../Context";
 import { toast } from "react-toastify";
 import { doc, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
+
+async function uploadToCloudinary(file) {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        method: "POST", body: form,
+    });
+    if (!res.ok) throw new Error("Upload failed");
+    const data = await res.json();
+    return data.secure_url;
+}
 import deleteImage from "../Assets/Images/cross-circle.png";
 
 const EMPTY_PROJECT = () => ({
@@ -83,14 +94,7 @@ export default function ProjectInfo() {
             const updatedProjects = [...projects];
             for (let i = 0; i < projects.length; i++) {
                 if (projects[i].image instanceof File) {
-                    const storageRef = ref(storage, `projects/${user.uid}/${projects[i].image.name}`);
-                    const task = uploadBytesResumable(storageRef, projects[i].image);
-                    updatedProjects[i].image = await new Promise((res, rej) => {
-                        task.on("state_changed", null,
-                            (err) => { toast.error("Image upload failed."); rej(err); },
-                            async () => res(await getDownloadURL(task.snapshot.ref))
-                        );
-                    });
+                    updatedProjects[i].image = await uploadToCloudinary(projects[i].image);
                 }
             }
             await updateDoc(doc(db, 'users', user.uid), { projects: updatedProjects });

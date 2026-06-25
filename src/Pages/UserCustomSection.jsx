@@ -1,6 +1,27 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useOutletContext } from "react-router-dom";
-import defaultImage from "../Assets/Images/6974855_4380.jpg";
+
+function LazyImg({ src, alt, className }) {
+    const [state, setState] = useState('loading'); // 'loading' | 'loaded' | 'error'
+    return (
+        <div className={`relative bg-gray-100 animate-pulse ${state !== 'loading' ? 'animate-none bg-transparent' : ''} ${className}`}>
+            <img
+                src={src}
+                alt={alt}
+                loading="lazy"
+                className={`absolute inset-0 w-full h-full object-cover rounded-lg transition-opacity duration-300 ${state === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
+                onLoad={() => setState('loaded')}
+                onError={() => setState('error')}
+            />
+            {state === 'error' && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-lg"
+                    style={{ background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(109,40,217,0.45)', textAlign: 'center', padding: 8 }}>{alt}</span>
+                </div>
+            )}
+        </div>
+    );
+}
 
 function CardRenderer({ card }) {
     switch (card.type) {
@@ -17,9 +38,8 @@ function CardRenderer({ card }) {
             return (
                 <div className="custom-card flex gap-6 max-sm:flex-col">
                     {card.imageUrl && (
-                        <img src={card.imageUrl} alt={card.title || "image"}
-                            onError={e => { e.currentTarget.src = defaultImage; }}
-                            className="w-48 h-36 object-cover rounded-lg flex-shrink-0 max-sm:w-full max-sm:h-48" />
+                        <LazyImg src={card.imageUrl} alt={card.title || "image"}
+                            className="w-48 h-36 flex-shrink-0 max-sm:w-full max-sm:h-48 rounded-lg" />
                     )}
                     <div className="flex flex-col gap-2 flex-1">
                         {card.title && <h3 className="custom-card-title">{card.title}</h3>}
@@ -90,9 +110,8 @@ function CardRenderer({ card }) {
                     {card.title && <h3 className="custom-card-title mb-3">{card.title}</h3>}
                     <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-2">
                         {(card.images || []).filter(Boolean).map((src, i) => (
-                            <img key={i} src={src} alt={`gallery-${i}`}
-                                onError={e => { e.currentTarget.src = defaultImage; }}
-                                className="w-full h-32 object-cover rounded-lg hover:opacity-90 transition-opacity" />
+                            <LazyImg key={i} src={src} alt={`gallery-${i}`}
+                                className="w-full h-32 rounded-lg hover:opacity-90 transition-opacity" />
                         ))}
                     </div>
                 </div>

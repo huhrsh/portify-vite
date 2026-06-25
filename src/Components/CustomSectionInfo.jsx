@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "../Context";
 import { doc, updateDoc } from "firebase/firestore";
-import { db, storage } from "../Firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db } from "../Firebase";
 import { toast } from "react-toastify";
 import deleteImage from "../Assets/Images/cross-circle.png";
 import upArrow from "../Assets/Images/up-arrow.png";
@@ -40,11 +39,16 @@ const iCls = "border hover:shadow-md focus-within:shadow-md bg-white p-3 py-0 ro
 const lbl  = "text-purple-700 text-base font-medium flex-shrink-0";
 const fi   = "outline-none w-full px-2 py-4 font-medium text-gray-600";
 
-async function uploadImageToStorage(file, uid, cardId) {
-    const ext = file.name.split('.').pop();
-    const storageRef = ref(storage, `custom-sections/${uid}/${cardId}-${Date.now()}.${ext}`);
-    const snap = await uploadBytes(storageRef, file);
-    return getDownloadURL(snap.ref);
+async function uploadToCloudinary(file) {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        method: "POST", body: form,
+    });
+    if (!res.ok) throw new Error("Upload failed");
+    const data = await res.json();
+    return data.secure_url;
 }
 
 function ImageUploader({ value, onChange, uid, cardId, label: fieldLabel = "Image" }) {
@@ -56,7 +60,7 @@ function ImageUploader({ value, onChange, uid, cardId, label: fieldLabel = "Imag
         if (!file) return;
         setUploading(true);
         try {
-            const url = await uploadImageToStorage(file, uid, cardId);
+            const url = await uploadToCloudinary(file);
             onChange(url);
             toast.success("Image uploaded.");
         } catch {

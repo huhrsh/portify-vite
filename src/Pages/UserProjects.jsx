@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+
+const FALLBACK_BG = 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)';
 import { Link, useOutletContext } from "react-router-dom";
 import link from "../Assets/Images/link.png";
 
@@ -8,6 +10,10 @@ export default function UserProjects() {
 
     const [selectedProject, setSelectedProject] = useState(null);
     const projectDetailsRef = useRef(null);
+    // 'loading' | 'loaded' | 'error'
+    const [imgState, setImgState] = useState({});
+    const setLoaded = useCallback((i) => setImgState(p => ({...p, [i]: 'loaded'})), []);
+    const setError  = useCallback((i) => setImgState(p => ({...p, [i]: 'error'})),  []);
 
     useEffect(()=>{
         window.scrollTo(0, 0);
@@ -33,29 +39,32 @@ export default function UserProjects() {
                     <div key={index} className={` ${selectedProject === project ? 'selected-project group' : 'not-selected-project group'}`} onClick={() => handleProjectClick(project)} >
                         <div className="group project-div">
                             <p className="know-more-text">Know More &gt;</p>
-                            {project.image ? (
-                                <img
-                                    src={project.image}
-                                    alt={project.projectTitle}
-                                    className="image group-hover:scale-105 group-hover:brightness-90 transition-all duration-300"
-                                    onError={e => {
-                                        e.currentTarget.style.display = 'none';
-                                        e.currentTarget.nextSibling.style.display = 'flex';
-                                    }}
-                                />
-                            ) : null}
+                            {/* Fallback / shimmer — always rendered so height is always reserved */}
                             <div
-                                className={`image items-center justify-center p-4 text-center ${project.image ? 'hidden' : 'flex'}`}
-                                style={{ background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)' }}
+                                className={`image flex items-center justify-center p-4 text-center
+                                    ${imgState[index] === 'loaded' ? 'hidden' : ''}`}
+                                style={{ background: FALLBACK_BG }}
                             >
                                 <span style={{
-                                    fontSize: 40, fontWeight: 800, lineHeight: 1.4,
-                                    color: 'rgba(109,40,217,0.45)', fontFamily: 'raleway, sans-serif',
+                                    fontSize: 18, fontWeight: 800, lineHeight: 1.4,
+                                    color: 'rgba(109,40,217,0.45)',
+                                    fontFamily: 'raleway, sans-serif',
                                     userSelect: 'none', textAlign: 'center',
                                 }}>
                                     {project.projectTitle || '?'}
                                 </span>
                             </div>
+                            {/* Real image — hidden until loaded so fallback handles sizing */}
+                            {project.image && (
+                                <img
+                                    src={project.image}
+                                    alt={project.projectTitle}
+                                    loading="lazy"
+                                    className={`image group-hover:scale-105 group-hover:brightness-90 transition-all duration-300 ${imgState[index] === 'loaded' ? '' : 'hidden'}`}
+                                    onLoad={() => setLoaded(index)}
+                                    onError={() => setError(index)}
+                                />
+                            )}
                         </div>
                         <h2 className="heading">{project.projectTitle}</h2>
                         <p className="title">{project.tagline}</p>

@@ -1,9 +1,20 @@
 import { useEffect, useState } from "react";
-import { db, storage } from "../Firebase";
+import { db } from "../Firebase";
 import { useUser } from "../Context";
 import { toast } from "react-toastify";
 import { updateDoc, doc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
+
+async function uploadToCloudinary(file) {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("upload_preset", import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        method: "POST", body: form,
+    });
+    if (!res.ok) throw new Error("Upload failed");
+    const data = await res.json();
+    return data.secure_url;
+}
 
 const EMPTY_CERT = () => ({
     title: "", organizer: "", issueDate: "", validity: "Lifetime", link: "", image: null, imageUrl: "",
@@ -84,14 +95,7 @@ export default function CertificationInfo() {
         try {
             for (let i = 0; i < certifications.length; i++) {
                 if (certifications[i].image instanceof File) {
-                    const storageRef = ref(storage, `certifications/${user.uid}/${certifications[i].image.name}`);
-                    const task = uploadBytesResumable(storageRef, certifications[i].image);
-                    updated[i].imageUrl = await new Promise((res, rej) => {
-                        task.on("state_changed", null,
-                            (err) => { toast.error("Image upload failed."); rej(err); },
-                            async () => res(await getDownloadURL(task.snapshot.ref))
-                        );
-                    });
+                    updated[i].imageUrl = await uploadToCloudinary(certifications[i].image);
                 }
             }
             const forFirestore = updated.map(c => ({

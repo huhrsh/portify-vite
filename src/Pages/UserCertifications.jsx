@@ -1,4 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+
+const FALLBACK_BG = 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)';
 import { Link, useOutletContext } from "react-router-dom";
 import defaultImage from "../Assets/Images/Certification-cuate.png";
 
@@ -11,8 +13,10 @@ const fmtDate = (val) => {
 export default function UserCertifications() {
     const { userDetails } = useOutletContext();
     const certifications = userDetails.certifications;
+    const [imgState, setImgState] = useState({});
+    const setLoaded = useCallback((i) => setImgState(p => ({...p, [i]: 'loaded'})), []);
+    const setError  = useCallback((i) => setImgState(p => ({...p, [i]: 'error'})),  []);
 
-    
     useEffect(()=>{
         window.scrollTo(0, 0);
     },[])
@@ -29,26 +33,35 @@ export default function UserCertifications() {
                 {certifications.map((cert, index) => (
                     <Link to={cert.link} target="_blank" key={index} className="certificate-div group" >
                         <div className="certificate-container-div">
-                            {cert.imageUrl ? (
-                                <img src={cert.imageUrl} alt={cert.title} className="image"
-                                    onError={e => {
-                                        e.currentTarget.style.display = 'none';
-                                        e.currentTarget.nextSibling.style.display = 'flex';
-                                    }} />
-                            ) : null}
-                            <div className={`image items-center justify-center p-5 text-center ${cert.imageUrl ? 'hidden' : 'flex'}`}
+                            {/* Fallback / shimmer — always rendered, reserves height */}
+                            <div
+                                className={`image flex items-center justify-center p-5 text-center
+                                    ${imgState[index] === 'loaded' ? 'hidden' : ''}`}
                                 style={{
                                     aspectRatio: '16/9',
-                                    background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)',
-                                }}>
+                                    background: FALLBACK_BG,
+                                }}
+                            >
                                 <span style={{
-                                    fontSize: 40, fontWeight: 800, lineHeight: 1.4,
-                                    color: 'rgba(109,40,217,0.45)', fontFamily: 'raleway, sans-serif',
+                                    fontSize: 18, fontWeight: 800, lineHeight: 1.4,
+                                    color: 'rgba(109,40,217,0.45)',
+                                    fontFamily: 'raleway, sans-serif',
                                     userSelect: 'none', textAlign: 'center',
                                 }}>
                                     {cert.title || '?'}
                                 </span>
                             </div>
+                            {/* Real image */}
+                            {cert.imageUrl && (
+                                <img
+                                    src={cert.imageUrl}
+                                    alt={cert.title}
+                                    loading="lazy"
+                                    className={`image ${imgState[index] === 'loaded' ? '' : 'hidden'}`}
+                                    onLoad={() => setLoaded(index)}
+                                    onError={() => setError(index)}
+                                />
+                            )}
                             <div className="certificate-data-div group-hover:py-8 h-0 group-hover:h-full">
                                 <h2 className="certificate-heading">{cert.title}</h2>
                                 <p className="certificate-organizer">by {cert.organizer}</p>
