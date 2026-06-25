@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useOutletContext } from "react-router-dom";
-import defaultImage from "../Assets/Images/6974855_4380.jpg";
 import link from "../Assets/Images/link.png";
 
 export default function UserProjects() {
@@ -34,7 +33,29 @@ export default function UserProjects() {
                     <div key={index} className={` ${selectedProject === project ? 'selected-project group' : 'not-selected-project group'}`} onClick={() => handleProjectClick(project)} >
                         <div className="group project-div">
                             <p className="know-more-text">Know More &gt;</p>
-                            <img src={project.image || defaultImage} alt={project.projectTitle} className="image group-hover:scale-105 group-hover:brightness-90 transition-all duration-300" onError={e => { e.currentTarget.src = defaultImage; }} />
+                            {project.image ? (
+                                <img
+                                    src={project.image}
+                                    alt={project.projectTitle}
+                                    className="image group-hover:scale-105 group-hover:brightness-90 transition-all duration-300"
+                                    onError={e => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.nextSibling.style.display = 'flex';
+                                    }}
+                                />
+                            ) : null}
+                            <div
+                                className={`image items-center justify-center p-4 text-center ${project.image ? 'hidden' : 'flex'}`}
+                                style={{ background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)' }}
+                            >
+                                <span style={{
+                                    fontSize: 40, fontWeight: 800, lineHeight: 1.4,
+                                    color: 'rgba(109,40,217,0.45)', fontFamily: 'raleway, sans-serif',
+                                    userSelect: 'none', textAlign: 'center',
+                                }}>
+                                    {project.projectTitle || '?'}
+                                </span>
+                            </div>
                         </div>
                         <h2 className="heading">{project.projectTitle}</h2>
                         <p className="title">{project.tagline}</p>

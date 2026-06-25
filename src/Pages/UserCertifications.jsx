@@ -36,17 +36,17 @@ export default function UserCertifications() {
                                         e.currentTarget.nextSibling.style.display = 'flex';
                                     }} />
                             ) : null}
-                            <div className={`image items-center justify-center ${cert.imageUrl ? 'hidden' : 'flex'}`}
+                            <div className={`image items-center justify-center p-5 text-center ${cert.imageUrl ? 'hidden' : 'flex'}`}
                                 style={{
                                     aspectRatio: '16/9',
                                     background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)',
                                 }}>
                                 <span style={{
-                                    fontSize: 72, fontWeight: 800, lineHeight: 1,
-                                    color: 'rgba(109,40,217,0.25)', fontFamily: 'raleway, sans-serif',
-                                    userSelect: 'none',
+                                    fontSize: 40, fontWeight: 800, lineHeight: 1.4,
+                                    color: 'rgba(109,40,217,0.45)', fontFamily: 'raleway, sans-serif',
+                                    userSelect: 'none', textAlign: 'center',
                                 }}>
-                                    {(cert.title?.[0] || '?').toUpperCase()}
+                                    {cert.title || '?'}
                                 </span>
                             </div>
                             <div className="certificate-data-div group-hover:py-8 h-0 group-hover:h-full">
