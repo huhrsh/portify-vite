@@ -103,7 +103,7 @@ export default function SignIn() {
         'border hover:shadow-md focus-within:shadow-md p-3 py-0 rounded-xl transition-all duration-200 flex w-full gap-3 items-center';
 
     return (
-        <main className="w-screen px-72 max-sm:px-6 h-[88vh] max-sm:h-auto font-[raleway] gap-12 flex items-center justify-between max-sm:flex-col max-sm:py-10">
+        <main className="w-screen px-48 max-sm:px-6 h-[88vh] max-sm:h-auto font-[raleway] gap-12 flex items-center justify-between max-sm:flex-col max-sm:py-10">
             <img
                 className="max-sm:hidden w-[42%] max-w-lg object-contain"
                 alt="Welcome back"

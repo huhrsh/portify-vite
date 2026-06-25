@@ -131,7 +131,7 @@ export default function SignUp() {
         'border hover:shadow-md focus-within:shadow-md group p-3 py-0 rounded-xl transition-all duration-200 flex w-full gap-3 items-center';
 
     return (
-        <main className="w-screen px-72 h-[88vh] max-sm:h-auto font-[raleway] gap-12 flex items-center justify-between
+        <main className="w-screen px-48 h-[88vh] max-sm:h-auto font-[raleway] gap-12 flex items-center justify-between
                          bg-cover max-sm:flex-col-reverse max-sm:justify-center max-sm:px-6 max-sm:py-10">
             <form className="flex flex-col gap-4 w-6/12 justify-center pb-8 rounded-xl h-full p-6 px-10 max-sm:px-0 max-sm:w-full">
                 <div className="mb-2">
