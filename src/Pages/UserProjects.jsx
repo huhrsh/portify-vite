@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 
 const FALLBACK_BG = 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%)';
 import { Link, useOutletContext } from "react-router-dom";
-import link from "../Assets/Images/link.png";
 
 export default function UserProjects() {
     const { userDetails } = useOutletContext();
@@ -22,8 +21,10 @@ export default function UserProjects() {
     const handleProjectClick = (project) => {
         setSelectedProject(project);
         setTimeout(() => {
-            projectDetailsRef.current.scrollIntoView({ behavior: "smooth" });
-        }, 100);  
+            const el = projectDetailsRef.current;
+            const top = el.getBoundingClientRect().top + window.scrollY - 92;
+            window.scrollTo({ top, behavior: "smooth" });
+        }, 100);
     };
 
     if(!projects){
@@ -105,7 +106,12 @@ export default function UserProjects() {
                         </ul>
                     </div>
                     <a href={`https://${selectedProject.githubLink}`} target="_blank" rel="noopener noreferrer" className="project-link">
-                        Project Link <img className="h-5" src={link} alt="link"/>
+                        Project Link
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15 3 21 3 21 9"/>
+                            <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
                     </a>
                 </div>
             )}
