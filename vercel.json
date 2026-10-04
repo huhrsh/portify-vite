@@ -1,3 +1,7 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "functions": { "api/page.js": { "includeFiles": "dist/index.html" } },
+  "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/:path+", "destination": "/api/page?path=/:path*" }
+  ]
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { profileSeo } from '../profileSeo';
 import { db } from "../Firebase";
 import { query, collection, where, getDocs, doc, updateDoc, increment, getDoc, setDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
@@ -52,7 +53,7 @@ export default function UserHeader() {
         setLoading(true);
         const fetchUser = async () => {
             try {
-                const q = query(collection(db, 'users'), where('username', '==', username));
+                const q = query(collection(db, 'users'), where('username', '==', username), where('websiteStatus', '==', 'active'));
                 const snapshot = await getDocs(q);
                 if (snapshot.empty) {
                     navigate('/no-user');
@@ -105,21 +106,17 @@ export default function UserHeader() {
 
     if (loading) return <UserLoading username={username} />;
 
+    if (!userDetails) return null;
     const style = userDetails.selectedStyle || 'bold-purple';
     const fontFamily = userDetails.selectedFont || 'outfit';
     const bgImage = backgroundImages[style];
 
-    const pageTitle  = userDetails.name
-        ? `${userDetails.name} — Portfolio`
-        : `${userDetails.username} — Portfolio`;
-    const description = userDetails.about
-        ? userDetails.about.slice(0, 155)
-        : `${userDetails.name || userDetails.username}'s portfolio, built with Portify.`;
-    const canonicalUrl = `${window.location.origin}/${userDetails.username}`;
+    const { title: pageTitle, description, canonical: canonicalUrl } = profileSeo(userDetails, location.pathname, import.meta.env.VITE_SITE_URL || window.location.origin);
 
     return (
         <>
             <Helmet>
+                <meta name="robots" content="index,follow" />
                 <title>{pageTitle}</title>
                 <meta name="description" content={description} />
                 <link rel="canonical" href={canonicalUrl} />
@@ -130,6 +127,7 @@ export default function UserHeader() {
                 <meta name="twitter:card"        content="summary" />
                 <meta name="twitter:title"       content={pageTitle} />
                 <meta name="twitter:description" content={description} />
+                <script type="application/ld+json">{JSON.stringify({ '@context': 'https://schema.org', '@type': 'ProfilePage', url: canonicalUrl, name: pageTitle, mainEntity: { '@type': 'Person', name: userDetails.name || userDetails.username, description, ...(userDetails.profession ? { jobTitle: userDetails.profession } : {}) } }).replace(/</g, '\\u003c')}</script>
             </Helmet>
 
             <header

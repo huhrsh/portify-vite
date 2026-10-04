@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import bgImage from "../Assets/Images/pexels-tuesday-temptation-190692-3780104.jpg";
 import 'animate.css'; 
 import { Link } from 'react-router-dom';
@@ -6,6 +7,7 @@ import { Link } from 'react-router-dom';
 export default function NoUser() {
     return (
         <>
+            <Helmet><title>Profile not found | Portify</title><meta name="robots" content="noindex" /></Helmet>
             <div className="absolute h-screen inset-0 bg-cover backdrop-blur-lg " style={{ backgroundImage: `url(${bgImage})` }}></div>
             <div className="backdrop-blur-3xl w-screen h-screen "></div>
             <div className='h-screen w-screen flex items-center justify-center absolute top-0'>
