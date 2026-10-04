@@ -1,11 +1,6 @@
 User-agent: *
 Allow: /
 
-# Block dashboard and auth routes from being indexed
-Disallow: /dashboard/
-Disallow: /sign-in
-Disallow: /sign-up
-Disallow: /forgot-password
-Disallow: /admin-dashboard
+# Non-public routes return noindex. Allow crawling so search engines can read it.
 
 Sitemap: https://the-portify.vercel.app/sitemap.xml

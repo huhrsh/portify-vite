@@ -5,7 +5,7 @@ import { db } from "../Firebase"
 import { toast } from "react-toastify"
 import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore"
 
-const RESERVED = ['no-user', 'dashboard', 'sign-in', 'sign-up', 'admin-dashboard', 'forgot-password'];
+const RESERVED = ['no-user', 'dashboard', 'sign-in', 'sign-up', 'admin-dashboard', 'forgot-password', 'api', 'assets'];
 
 export default function UsernameInfo() {
     const usernameRef = createRef()

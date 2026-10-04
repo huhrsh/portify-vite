@@ -1,4 +1,6 @@
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Helmet } from 'react-helmet-async';
+import { DEFAULT_SITE_URL } from '../profileSeo';
 import profile from "../Assets/Images/abstract.png";
 import Loading from "../Pages/Loading";
 import { useUser } from "../Context";
@@ -12,6 +14,7 @@ export default function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
     const { user, loading } = useUser();
     const navigate = useNavigate();
+    const { pathname } = useLocation();
 
     const handleSignOut = async (e) => {
         e.preventDefault();
@@ -31,6 +34,12 @@ export default function Header() {
 
     return (
         <div className="flex flex-col min-h-screen">
+            <Helmet>
+                <title>Portify - Create Your Personal Portfolio Website</title>
+                <meta name="description" content="Create your personal portfolio website effortlessly with Portify." />
+                <meta name="robots" content={pathname === '/' ? 'index,follow' : 'noindex'} />
+                {pathname === '/' && <link rel="canonical" href={`${import.meta.env.VITE_SITE_URL || DEFAULT_SITE_URL}/`} />}
+            </Helmet>
             <ToastContainer autoClose={3000} position="top-center" />
             {loading && <Loading />}
 
