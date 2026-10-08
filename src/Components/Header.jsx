@@ -12,7 +12,7 @@ import Footer from "./Footer";
 
 export default function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
-    const { user, loading } = useUser();
+    const { user, loading, authError } = useUser();
     const navigate = useNavigate();
     const { pathname } = useLocation();
 
@@ -42,6 +42,9 @@ export default function Header() {
             </Helmet>
             <ToastContainer autoClose={3000} position="top-center" />
             {loading && <Loading />}
+            {authError && <div role="alert" className="bg-amber-50 p-4 text-center text-amber-900">
+                {authError} <button type="button" className="underline font-semibold" onClick={() => window.location.reload()}>Retry</button>
+            </div>}
 
             <header className="shadow-sm sticky top-0 left-0 bg-white/95 backdrop-blur-md z-50 border-b border-purple-50 font-[raleway] px-10 py-3.5 flex justify-between items-center max-sm:px-4">
                 {/* Logo */}

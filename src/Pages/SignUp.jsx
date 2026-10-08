@@ -80,6 +80,7 @@ export default function SignUp() {
                 toast.success("Account created! Please sign in.");
                 await signOut(auth);
                 navigate('/sign-in');
+                setName(""); setEmail(""); setPassword(""); setConfirmPassword("");
             } catch {
                 try { await deleteUser(newUser); } catch { /* best effort */ }
                 toast.error("Error creating account. Please try again.");
@@ -90,7 +91,6 @@ export default function SignUp() {
             setLoading(false);
         }
 
-        setName(""); setEmail(""); setPassword(""); setConfirmPassword("");
     }
 
     async function signInWithGoogle(e) {
@@ -131,12 +131,12 @@ export default function SignUp() {
         'border hover:shadow-md focus-within:shadow-md group p-3 py-0 rounded-xl transition-all duration-200 flex w-full gap-3 items-center';
 
     return (
-        <main className="w-screen px-48 h-[88vh] max-sm:h-auto font-[raleway] gap-12 flex items-center justify-between
-                         bg-cover max-sm:flex-col-reverse max-sm:justify-center max-sm:px-6 max-sm:py-10">
-            <form className="flex flex-col gap-4 w-6/12 justify-center pb-8 rounded-xl h-full p-6 px-10 max-sm:px-0 max-sm:w-full">
+        <main className="w-screen px-8 xl:px-24 min-h-[80vh] max-lg:h-auto font-[raleway] gap-12 flex items-center justify-between
+                         bg-cover max-lg:flex-col-reverse max-lg:justify-center max-lg:px-6 max-lg:py-10">
+            <form onSubmit={handleSignUp} className="flex flex-col gap-4 w-6/12 justify-center pb-8 rounded-xl h-full p-6 px-10 max-lg:px-0 max-lg:w-full">
                 <div className="mb-2">
-                    <h1 className="text-4xl max-sm:text-3xl font-bold text-transparent bg-gradient-to-tl from-violet-600 to-purple-700 bg-clip-text">
-                        Let's get started
+                    <h1 className="text-4xl max-lg:text-3xl font-bold text-transparent bg-gradient-to-tl from-violet-600 to-purple-700 bg-clip-text">
+                        Let&apos;s get started
                     </h1>
                     <p className="text-gray-500 text-sm mt-1">Create your free Portify account</p>
                 </div>
@@ -145,6 +145,8 @@ export default function SignUp() {
                     <h2 className="text-purple-700 text-sm font-semibold flex-shrink-0">Name</h2>
                     <input
                         ref={nameRef}
+                        aria-label="Name"
+                        autoComplete="name"
                         className="outline-none w-full px-2 py-4 font-medium text-gray-600 bg-transparent"
                         type="text"
                         placeholder="Jane Doe"
@@ -157,6 +159,8 @@ export default function SignUp() {
                     <h2 className="text-purple-700 text-sm font-semibold flex-shrink-0">Email</h2>
                     <input
                         ref={emailRef}
+                        aria-label="Email"
+                        autoComplete="email"
                         className="outline-none w-full px-2 py-4 font-medium text-gray-600 bg-transparent"
                         type="email"
                         placeholder="jane@example.com"
@@ -169,48 +173,47 @@ export default function SignUp() {
                     <h2 className="text-purple-700 text-sm font-semibold flex-shrink-0">Password</h2>
                     <input
                         ref={pwRef}
+                        aria-label="Password"
+                        autoComplete="new-password"
                         className="outline-none w-full px-2 py-4 font-medium text-gray-600 bg-transparent"
                         type={visiblePw1 ? "text" : "password"}
                         placeholder="Min. 8 characters"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                     />
-                    <img
-                        className="h-5 pr-1 cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
-                        src={visiblePw1 ? eyebrow : eye}
+                    <button type="button" aria-label={visiblePw1 ? 'Hide password' : 'Show password'} aria-pressed={visiblePw1}
                         onClick={() => setVisiblePw1(v => !v)}
-                        alt="toggle visibility"
-                    />
+                    ><img className="h-5 pr-1 opacity-60 hover:opacity-100" src={visiblePw1 ? eyebrow : eye} alt="" /></button>
                 </div>
 
                 <div className={inputClass}>
                     <h2 className="text-purple-700 text-sm font-semibold flex-shrink-0 text-nowrap">Confirm</h2>
                     <input
                         ref={cpwRef}
+                        aria-label="Confirm password"
+                        autoComplete="new-password"
                         className="outline-none w-full px-2 py-4 font-medium text-gray-600 bg-transparent"
                         type={visiblePw2 ? "text" : "password"}
                         placeholder="Re-enter password"
                         value={confirmPassword}
                         onChange={e => setConfirmPassword(e.target.value)}
                     />
-                    <img
-                        className="h-5 pr-1 cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
-                        src={visiblePw2 ? eyebrow : eye}
+                    <button type="button" aria-label={visiblePw2 ? 'Hide confirmation password' : 'Show confirmation password'} aria-pressed={visiblePw2}
                         onClick={() => setVisiblePw2(v => !v)}
-                        alt="toggle visibility"
-                    />
+                    ><img className="h-5 pr-1 opacity-60 hover:opacity-100" src={visiblePw2 ? eyebrow : eye} alt="" /></button>
                 </div>
 
                 <div className="flex flex-wrap gap-3 mt-1">
                     <button
                         className="bg-gradient-to-bl hover:shadow-lg hover:shadow-purple-200 duration-200 from-violet-500 to-purple-700 transition-all px-6 text-sm font-semibold rounded-lg py-2.5 text-white"
-                        onClick={handleSignUp}
+                        type="submit"
                     >
                         Create Account
                     </button>
                     <button
                         className="flex gap-2 items-center border border-gray-200 hover:border-purple-300 hover:shadow-sm duration-200 transition-all px-4 py-2.5 text-sm font-semibold rounded-lg text-gray-700"
                         onClick={signInWithGoogle}
+                        type="button"
                     >
                         <img className="h-5" src={google} alt="google" />
                         Continue with Google
@@ -223,7 +226,7 @@ export default function SignUp() {
             </form>
 
             <img
-                className="max-sm:hidden w-[42%] max-w-lg object-contain"
+                className="max-lg:hidden w-[42%] max-w-lg object-contain"
                 alt="Get started"
                 src={signUpImage}
             />

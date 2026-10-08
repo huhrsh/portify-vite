@@ -3,7 +3,8 @@ import { db } from "../Firebase";
 import { useUser } from "../Context";
 import { toast } from "react-toastify";
 import { doc, updateDoc } from "firebase/firestore";
-import deleteImage from "../Assets/Images/cross-circle.png";
+import { updateRecord } from '../editorData';
+import { contactHref } from '../profileLinks';
 
 export default function ContactInfo() {
     const { user, setUser, setLoading } = useUser();
@@ -21,9 +22,7 @@ export default function ContactInfo() {
     }, [user]);
 
     const handleContactChange = (index, field, value) => {
-        const newContacts = [...contacts];
-        newContacts[index][field] = value;
-        setContacts(newContacts);
+        setContacts(updateRecord(contacts, index, { [field]: value }));
     };
 
     const addContact = () => {
@@ -37,11 +36,17 @@ export default function ContactInfo() {
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
+        const populated = contacts.filter(contact => contact.value.trim()).map(contact => ({ label: contact.label.trim(), value: contact.value.trim() }));
+        if (populated.some(contact => !contact.label || !contactHref(contact))) {
+            toast.error('Check your contact labels, email, phone number and website URLs.');
+            return;
+        }
         setLoading(true);
 
         try {
-            await updateDoc(doc(db, 'users', user.uid), { contacts });
-            setUser({ ...user, contacts });
+            await updateDoc(doc(db, 'users', user.uid), { contacts: populated });
+            setContacts(populated);
+            setUser(current => ({ ...current, contacts: populated }));
             toast.success("Contact information updated.");
         } catch (error) {
             console.error("Error saving contact information:", error);
@@ -59,7 +64,7 @@ export default function ContactInfo() {
                     <div key={index} className="flex flex-col gap-4 border p-4 rounded shadow">
                         <div className="flex justify-between items-center">
                             <h3 className="text-purple-700 text-lg font-bold">Contact {index + 1}</h3>
-                            {index > 1 && (
+                            {(
                                 <button
                                     type="button"
                                     onClick={() => removeContact(index)}
@@ -70,26 +75,25 @@ export default function ContactInfo() {
                             )}
                         </div>
                         <div className='border hover:shadow-lg focus-within:shadow-lg group p-3 py-0 rounded-xl transition-all duration-200 flex w-full gap-3 items-center'>
-                            <h2 className='text-purple-700 text-lg font-medium'>Label:</h2>
+                            <label htmlFor={`contact-label-${index}`} className='text-purple-700 text-lg font-medium'>Label:</label>
                             <input
                                 type="text"
+                                id={`contact-label-${index}`}
                                 value={contact.label}
-                                disabled={index<2}
                                 placeholder="Phone"
                                 onChange={(e) => handleContactChange(index, "label", e.target.value)}
                                 className="outline-none w-full bg-white h-full px-2 py-4 font-medium text-gray-600"
-                                required
                             />
                         </div>
                         <div className='border hover:shadow-lg focus-within:shadow-lg group p-3 py-0 rounded-xl transition-all duration-200 flex w-full gap-3 items-center'>
-                            <h2 className='text-purple-700 text-lg font-medium'>Value:</h2>
+                            <label htmlFor={`contact-value-${index}`} className='text-purple-700 text-lg font-medium'>Value:</label>
                             <input
                                 type="text"
+                                id={`contact-value-${index}`}
                                 value={contact.value}
                                 placeholder="1234567890"
                                 onChange={(e) => handleContactChange(index, "value", e.target.value)}
                                 className="outline-none w-full h-full px-2 py-4 font-medium text-gray-600"
-                                required
                             />
                         </div>
                     </div>

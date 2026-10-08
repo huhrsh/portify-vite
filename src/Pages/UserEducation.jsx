@@ -60,7 +60,7 @@ export default function UserEducation() {
         }
     };
 
-    if(!educationDetails){
+    if(!educationDetails?.length){
         return(
             <h1 style={{ fontFamily: userDetails.selectedFont ? userDetails.selectedFont : 'Outfit' }} className="nothing-to-show">Nothing to show here</h1>
         )
@@ -70,8 +70,8 @@ export default function UserEducation() {
         <>
             <section className="education-desktop">
                 <Timeline position="alternate-reverse">
-                    {sortedEducationDetails?.map((edu) => (
-                        <TimelineItem key={edu.level}>
+                    {sortedEducationDetails?.map((edu, index) => (
+                        <TimelineItem key={edu.id || `${edu.level}-${index}`}>
                             <TimelineSeparator>
                                 <TimelineDot />
                                 <TimelineConnector />
@@ -85,8 +85,8 @@ export default function UserEducation() {
             </section>
             <section className="education-mobile">
                 <Timeline position="right">
-                    {sortedEducationDetails?.map((edu) => (
-                        <TimelineItem key={edu.level}>
+                    {sortedEducationDetails?.map((edu, index) => (
+                        <TimelineItem key={edu.id || `${edu.level}-${index}`}>
                             <TimelineSeparator>
                                 <TimelineDot />
                                 <TimelineConnector />

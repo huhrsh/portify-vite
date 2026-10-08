@@ -29,4 +29,3 @@ dist-ssr
 *.sw?
 
 .env
-.env.example

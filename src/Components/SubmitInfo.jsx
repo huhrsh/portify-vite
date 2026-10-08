@@ -13,13 +13,13 @@ export default function SubmitInfo() {
     useEffect(() => {}, []);
 
     const handlePublish = async () => {
-        if (!user.username) {
+        if (!user.username?.trim()) {
             toast.error("Please set a username first.");
             navigate('/dashboard/general');
             return;
         }
-        if (!user.about) {
-            toast.error("Please fill in your About section first.");
+        if (!user.name?.trim() || !user.about?.trim() || !user.profession?.trim()) {
+            toast.error("Please fill in your name, profession and About section first.");
             navigate('/dashboard/about');
             return;
         }
@@ -44,7 +44,7 @@ export default function SubmitInfo() {
                 <div className="flex items-center gap-8 max-sm:flex-col">
                     <img src={hurryImage} alt="Publish" className="w-5/12 max-sm:w-full max-w-xs" />
                     <div className="flex flex-col gap-4">
-                        <p className="text-base text-gray-600">Make sure you've filled in your username and about section before publishing. Everything else can be updated anytime after going live.</p>
+                        <p className="text-base text-gray-600">Make sure you&apos;ve filled in your username and about section before publishing. Everything else can be updated anytime after going live.</p>
                         <button
                             onClick={handlePublish}
                             className="bg-gradient-to-br from-purple-500 to-purple-700 text-white font-semibold py-2.5 px-6 rounded-xl self-start hover:shadow-lg hover:shadow-purple-200 transition-all duration-200"

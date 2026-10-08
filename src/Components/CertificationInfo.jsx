@@ -3,6 +3,9 @@ import { db } from "../Firebase";
 import { useUser } from "../Context";
 import { toast } from "react-toastify";
 import { updateDoc, doc } from "firebase/firestore";
+import { updateRecord } from '../editorData';
+import { normalizeWebUrl } from '../profileLinks';
+import EditorImagePreview from './EditorImagePreview';
 
 async function uploadToCloudinary(file) {
     const form = new FormData();
@@ -21,13 +24,14 @@ const EMPTY_CERT = () => ({
 });
 
 const serializeForDraft = (certs) =>
-    certs.map(c => ({ ...c, image: null }));
+    certs.map(c => ({ ...c, imageUrl: c.imageUrl || (typeof c.image === 'string' ? c.image : ''), image: null }));
 
 export default function CertificationInfo() {
-    const { user, setLoading } = useUser();
+    const { user, setUser, setLoading } = useUser();
     const draftKey = user ? `portify-certs-${user.uid}` : null;
     const [certifications, setCertifications] = useState([EMPTY_CERT()]);
     const [hasDraft, setHasDraft] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (!user) return;
@@ -35,33 +39,33 @@ export default function CertificationInfo() {
             try {
                 const saved = JSON.parse(localStorage.getItem(draftKey));
                 const base  = serializeForDraft(user.certifications || []);
-                if (saved?.length && JSON.stringify(saved) !== JSON.stringify(base)) {
+                if (Array.isArray(saved) && JSON.stringify(saved) !== JSON.stringify(base)) {
                     setHasDraft(true);
-                    setCertifications(saved.map(c => ({ ...c, image: null })));
+                    setCertifications(serializeForDraft(saved));
                     return;
                 }
-            } catch {}
+            } catch { /* Browser draft storage may be unavailable. */ }
         }
-        if (user?.certifications?.length) {
-            setCertifications(user.certifications.map(c => ({ ...c, image: null })));
+        if (Array.isArray(user.certifications)) {
+            setCertifications(serializeForDraft(user.certifications));
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const saveDraft = (data) => {
         if (!draftKey) return;
-        try { localStorage.setItem(draftKey, JSON.stringify(serializeForDraft(data))); } catch {}
+        try { localStorage.setItem(draftKey, JSON.stringify(serializeForDraft(data))); } catch { /* Browser draft storage may be unavailable. */ }
     };
 
     const clearDraft = () => {
-        if (draftKey) localStorage.removeItem(draftKey);
+        try { if (draftKey) localStorage.removeItem(draftKey); } catch { /* Browser draft storage may be unavailable. */ }
         setHasDraft(false);
     };
 
     const discardDraft = () => {
         clearDraft();
-        if (user?.certifications?.length) {
-            setCertifications(user.certifications.map(c => ({ ...c, image: null })));
+        if (Array.isArray(user?.certifications)) {
+            setCertifications(serializeForDraft(user.certifications));
         } else {
             setCertifications([EMPTY_CERT()]);
         }
@@ -69,29 +73,34 @@ export default function CertificationInfo() {
     };
 
     const clearAll = () => {
-        setCertifications([EMPTY_CERT()]);
-        clearDraft();
+        update([]);
         toast.info("Cleared. Save to apply.");
     };
 
-    const update = (data) => { setCertifications(data); saveDraft(data); };
+    const update = (data) => { setCertifications(data); saveDraft(data); setHasDraft(true); };
 
     const handleChange = (index, field, value) => {
-        const n = [...certifications]; n[index][field] = value; update(n);
+        update(updateRecord(certifications, index, { [field]: value }));
     };
     const handleImageChange = (index, e) => {
-        const n = [...certifications]; if (e.target.files[0]) n[index].image = e.target.files[0]; update(n);
+        if (e.target.files[0]) update(updateRecord(certifications, index, { image: e.target.files[0] }));
     };
     const handleLifetimeChange = (index, checked) => {
-        const n = [...certifications]; n[index].validity = checked ? "Lifetime" : ""; update(n);
+        update(updateRecord(certifications, index, { validity: checked ? 'Lifetime' : '' }));
     };
     const addCertification    = () => update([...certifications, EMPTY_CERT()]);
     const removeCertification = (index) => update(certifications.filter((_, i) => i !== index));
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
+        if (saving) return;
+        if (certifications.some(cert => !normalizeWebUrl(cert.link))) {
+            toast.error('Enter a valid certificate URL.');
+            return;
+        }
+        setSaving(true);
         setLoading(true);
-        const updated = [...certifications];
+        const updated = certifications.map(cert => ({ ...cert }));
         try {
             for (let i = 0; i < certifications.length; i++) {
                 if (certifications[i].image instanceof File) {
@@ -100,15 +109,18 @@ export default function CertificationInfo() {
             }
             const forFirestore = updated.map(c => ({
                 title: c.title, organizer: c.organizer, issueDate: c.issueDate,
-                link: c.link, validity: c.validity, imageUrl: c.imageUrl || c.image || "",
+                link: normalizeWebUrl(c.link), validity: c.validity, imageUrl: c.imageUrl || (typeof c.image === 'string' ? c.image : ''),
             }));
             await updateDoc(doc(db, 'users', user.uid), { certifications: forFirestore });
             clearDraft();
+            setCertifications(forFirestore.map(cert => ({ ...cert, image: null })));
+            setUser(current => ({ ...current, certifications: forFirestore }));
             toast.success("Certifications saved.");
         } catch {
             toast.error("Failed to save certifications.");
         }
         setLoading(false);
+        setSaving(false);
     };
 
     const inputCls = "border hover:shadow-md focus-within:shadow-md bg-white p-3 py-0 rounded-xl transition-all duration-200 flex w-full gap-3 items-center";
@@ -133,7 +145,7 @@ export default function CertificationInfo() {
                     <div key={index} className="flex flex-col gap-4 border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-center">
                             <h3 className="text-purple-700 text-base font-bold">Certificate {index + 1}</h3>
-                            {certifications.length > 1 && (
+                            {(
                                 <button type="button" onClick={() => removeCertification(index)}
                                     className="text-sm text-rose-500 hover:text-rose-700 font-medium transition-colors">
                                     Remove
@@ -143,19 +155,19 @@ export default function CertificationInfo() {
 
                         <div className={inputCls}>
                             <span className="text-purple-700 text-base font-medium flex-shrink-0">Title <Req /></span>
-                            <input type="text" value={cert.title} placeholder="Certificate Title"
+                            <input type="text" aria-label={`Certificate ${index + 1} title`} value={cert.title} placeholder="Certificate Title"
                                 onChange={e => handleChange(index, "title", e.target.value)}
                                 className="outline-none w-full px-2 py-4 font-medium text-gray-600" required />
                         </div>
                         <div className={inputCls}>
                             <span className="text-purple-700 text-base font-medium flex-shrink-0">Organizer <Req /></span>
-                            <input type="text" value={cert.organizer} placeholder="Certification Organizer"
+                            <input type="text" aria-label={`Certificate ${index + 1} organizer`} value={cert.organizer} placeholder="Certification Organizer"
                                 onChange={e => handleChange(index, "organizer", e.target.value)}
                                 className="outline-none w-full px-2 py-4 font-medium text-gray-600" required />
                         </div>
                         <div className={inputCls}>
                             <span className="text-purple-700 text-base font-medium flex-shrink-0">Link <Req /></span>
-                            <input type="text" value={cert.link} placeholder="Certificate link"
+                            <input type="text" aria-label={`Certificate ${index + 1} link`} value={cert.link} placeholder="Certificate link"
                                 onChange={e => handleChange(index, "link", e.target.value)}
                                 className="outline-none w-full px-2 py-4 font-medium text-gray-600" required />
                         </div>
@@ -163,14 +175,14 @@ export default function CertificationInfo() {
                         <div className="flex gap-4 max-sm:flex-col">
                             <div className={inputCls}>
                                 <span className="text-purple-700 text-base font-medium flex-shrink-0">Date of Issue:</span>
-                                <input type="date" value={cert.issueDate}
+                                <input type="date" aria-label={`Certificate ${index + 1} issue date`} value={cert.issueDate}
                                     onChange={e => handleChange(index, "issueDate", e.target.value)}
                                     className="outline-none w-full px-2 py-3 bg-white font-medium text-gray-600" />
                             </div>
                             <div className={inputCls}>
                                 <span className="text-purple-700 text-base font-medium flex-shrink-0">Valid till:</span>
                                 {cert.validity !== "Lifetime"
-                                    ? <input type="date" value={cert.validity}
+                                    ? <input type="date" aria-label={`Certificate ${index + 1} expiry date`} value={cert.validity}
                                         onChange={e => handleChange(index, "validity", e.target.value)}
                                         className="outline-none w-full px-2 py-3 font-medium text-gray-600 bg-white" />
                                     : <span className="flex-1">&nbsp;</span>
@@ -186,9 +198,10 @@ export default function CertificationInfo() {
 
                         <div className={`${inputCls} max-sm:py-1`}>
                             <span className="text-purple-700 text-base font-medium flex-shrink-0">Image:</span>
-                            <input type="file" accept="image/*" onChange={e => handleImageChange(index, e)}
+                            <input type="file" aria-label={`Certificate ${index + 1} image`} accept="image/*" onChange={e => handleImageChange(index, e)}
                                 className="outline-none w-full px-2 py-2 font-medium text-gray-600" />
                         </div>
+                        <EditorImagePreview value={cert.image || cert.imageUrl} label={`Certificate ${index + 1}`} onRemove={() => update(updateRecord(certifications, index, { image: null, imageUrl: '' }))} />
                     </div>
                 ))}
 
@@ -197,9 +210,9 @@ export default function CertificationInfo() {
                         className="bg-gradient-to-bl from-violet-500 to-purple-700 text-white text-sm font-semibold py-2.5 px-5 rounded-lg hover:shadow-lg transition-all">
                         Add Certification
                     </button>
-                    <button type="submit"
+                    <button type="submit" disabled={saving}
                         className="bg-gradient-to-bl from-violet-500 to-purple-700 text-white text-sm font-semibold py-2.5 px-5 rounded-lg hover:shadow-lg transition-all">
-                        Save Changes
+                        {saving ? 'Saving…' : 'Save Changes'}
                     </button>
                 </div>
             </form>
@@ -209,7 +222,7 @@ export default function CertificationInfo() {
                 <ul className="space-y-1">
                     {[
                         "If an image shows \"No file chosen\" after saving, the existing image is still there — only new selections replace it.",
-                        "Your draft auto-saves so a refresh won't lose your work.",
+                        "Text drafts save in this browser. Reselect any new image files after a refresh.",
                         "Check \"Lifetime\" for certifications that don't expire.",
                     ].map((tip, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-gray-600">

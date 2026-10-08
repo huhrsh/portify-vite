@@ -3,6 +3,9 @@ import { db } from "../Firebase";
 import { useUser } from "../Context";
 import { toast } from "react-toastify";
 import { doc, updateDoc } from "firebase/firestore";
+import { updateRecord, updatePoint, addPoint as appendPoint, removePoint as deletePoint } from '../editorData';
+import { normalizeWebUrl } from '../profileLinks';
+import EditorImagePreview from './EditorImagePreview';
 
 async function uploadToCloudinary(file) {
     const form = new FormData();
@@ -30,81 +33,89 @@ export default function ProjectInfo() {
     const draftKey = user ? `portify-projects-${user.uid}` : null;
     const [projects, setProjects] = useState([EMPTY_PROJECT()]);
     const [hasDraft, setHasDraft] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (!user) return;
         if (draftKey) {
             try {
                 const saved = JSON.parse(localStorage.getItem(draftKey));
-                if (saved?.length && JSON.stringify(saved) !== JSON.stringify(serializeForDraft(user.projects || []))) {
+                if (Array.isArray(saved) && JSON.stringify(saved) !== JSON.stringify(serializeForDraft(user.projects || []))) {
                     setHasDraft(true);
                     setProjects(saved);
                     return;
                 }
-            } catch {}
+            } catch { /* Browser draft storage may be unavailable. */ }
         }
-        if (user?.projects?.length) setProjects(user.projects);
+        setProjects(Array.isArray(user.projects) ? user.projects : [EMPTY_PROJECT()]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const saveDraft = (data) => {
         if (!draftKey) return;
-        try { localStorage.setItem(draftKey, JSON.stringify(serializeForDraft(data))); } catch {}
+        try { localStorage.setItem(draftKey, JSON.stringify(serializeForDraft(data))); } catch { /* Browser draft storage may be unavailable. */ }
     };
 
     const clearDraft = () => {
-        if (draftKey) localStorage.removeItem(draftKey);
+        try { if (draftKey) localStorage.removeItem(draftKey); } catch { /* Browser draft storage may be unavailable. */ }
         setHasDraft(false);
     };
 
     const discardDraft = () => {
         clearDraft();
-        setProjects(user?.projects?.length ? user.projects : [EMPTY_PROJECT()]);
+        setProjects(Array.isArray(user?.projects) ? user.projects : [EMPTY_PROJECT()]);
         toast.info("Draft discarded.");
     };
 
     const clearAll = () => {
-        setProjects([EMPTY_PROJECT()]);
-        clearDraft();
+        update([]);
         toast.info("Cleared. Save to apply.");
     };
 
-    const update = (updated) => { setProjects(updated); saveDraft(updated); };
+    const update = (updated) => { setProjects(updated); saveDraft(updated); setHasDraft(true); };
 
     const handleProjectChange = (index, field, value) => {
-        const n = [...projects]; n[index][field] = value; update(n);
+        update(updateRecord(projects, index, { [field]: value }));
     };
     const handleImageChange = (index, e) => {
-        const n = [...projects]; if (e.target.files[0]) n[index].image = e.target.files[0]; update(n);
+        if (e.target.files[0]) update(updateRecord(projects, index, { image: e.target.files[0] }));
     };
     const handlePointChange = (pi, field, ci, value) => {
-        const n = [...projects]; n[pi][field][ci] = value; update(n);
+        update(updatePoint(projects, pi, field, ci, value));
     };
     const addProject    = () => update([...projects, EMPTY_PROJECT()]);
     const removeProject = (i) => update(projects.filter((_, idx) => idx !== i));
-    const addPoint      = (pi, field) => { const n = [...projects]; n[pi][field].push(""); update(n); };
+    const addPoint      = (pi, field) => update(appendPoint(projects, pi, field));
     const removePoint   = (pi, field, ci) => {
-        const n = [...projects]; n[pi][field] = n[pi][field].filter((_, i) => i !== ci); update(n);
+        update(deletePoint(projects, pi, field, ci));
     };
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
+        if (saving) return;
+        if (projects.some(project => !normalizeWebUrl(project.githubLink))) {
+            toast.error('Enter a valid project URL, such as https://github.com/user/project.');
+            return;
+        }
+        setSaving(true);
         setLoading(true);
         try {
-            const updatedProjects = [...projects];
+            const updatedProjects = projects.map(project => ({ ...project, githubLink: normalizeWebUrl(project.githubLink) }));
             for (let i = 0; i < projects.length; i++) {
                 if (projects[i].image instanceof File) {
                     updatedProjects[i].image = await uploadToCloudinary(projects[i].image);
                 }
             }
             await updateDoc(doc(db, 'users', user.uid), { projects: updatedProjects });
-            setUser({ ...user, projects: updatedProjects });
             clearDraft();
+            setProjects(updatedProjects);
+            setUser(current => ({ ...current, projects: updatedProjects }));
             toast.success("Projects saved.");
         } catch {
             toast.error("Failed to save projects.");
         }
         setLoading(false);
+        setSaving(false);
     };
 
     const inputCls = "border hover:shadow-md focus-within:shadow-md p-3 py-0 rounded-xl transition-all duration-200 flex w-full gap-3 items-center bg-white";
@@ -137,34 +148,35 @@ export default function ProjectInfo() {
 
                         <div className={inputCls}>
                             <span className="text-purple-700 text-base font-medium flex-shrink-0">Title <Req /></span>
-                            <input type="text" value={project.projectTitle} placeholder="Bliss India"
+                            <input type="text" aria-label={`Project ${pi + 1} title`} value={project.projectTitle} placeholder="Bliss India"
                                 onChange={e => handleProjectChange(pi, "projectTitle", e.target.value)}
                                 className="outline-none w-full px-2 py-4 font-medium text-gray-600" required />
                         </div>
                         <div className={inputCls}>
                             <span className="text-purple-700 text-base font-medium flex-shrink-0">Tagline <Req /></span>
-                            <input type="text" value={project.tagline} placeholder="An e-commerce website"
+                            <input type="text" aria-label={`Project ${pi + 1} tagline`} value={project.tagline} placeholder="An e-commerce website"
                                 onChange={e => handleProjectChange(pi, "tagline", e.target.value)}
                                 className="outline-none w-full px-2 py-4 font-medium text-gray-600" required />
                         </div>
                         <div className={inputCls}>
                             <span className="text-purple-700 text-base font-medium flex-shrink-0">Project link <Req /></span>
-                            <input type="text" value={project.githubLink} placeholder="github.com/user/project"
+                            <input type="text" aria-label={`Project ${pi + 1} link`} value={project.githubLink} placeholder="github.com/user/project"
                                 onChange={e => handleProjectChange(pi, "githubLink", e.target.value)}
                                 className="outline-none w-full px-2 py-4 font-medium text-gray-600" required />
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className="text-purple-700 text-base font-medium">Overview <Req /></span>
-                            <textarea value={project.overview}
+                            <textarea aria-label={`Project ${pi + 1} overview`} value={project.overview}
                                 placeholder="Describe the project, its purpose and impact..."
                                 onChange={e => handleProjectChange(pi, "overview", e.target.value)}
                                 className="outline-none w-full p-3 font-medium text-gray-600 hover:shadow-md focus:shadow-md border rounded-xl min-h-28 resize-none transition-shadow" required />
                         </div>
                         <div className={`${inputCls} max-sm:py-1`}>
                             <span className="text-purple-700 text-base font-medium flex-shrink-0">Image (optional):</span>
-                            <input type="file" accept="image/*" onChange={e => handleImageChange(pi, e)}
+                            <input type="file" aria-label={`Project ${pi + 1} image`} accept="image/*" onChange={e => handleImageChange(pi, e)}
                                 className="outline-none w-full px-2 py-2 font-medium text-gray-600" />
                         </div>
+                        <EditorImagePreview value={project.image} label={`Project ${pi + 1}`} onRemove={() => handleProjectChange(pi, 'image', null)} />
 
                         {[
                             { field: "technologies", label: "Technologies / Libraries", placeholder: "React, Firebase" },
@@ -175,11 +187,10 @@ export default function ProjectInfo() {
                                 <span className="text-purple-700 text-base font-medium">{label}:</span>
                                 {project[field]?.map((val, ci) => (
                                     <div key={ci} className="flex gap-2 items-center">
-                                        <input type="text" value={val} placeholder={placeholder}
+                                        <input type="text" aria-label={`Project ${pi + 1} ${field} ${ci + 1}`} value={val} placeholder={placeholder}
                                             onChange={e => handlePointChange(pi, field, ci, e.target.value)}
-                                            className="border hover:shadow-md focus:shadow-md rounded-xl outline-none w-full px-3 py-3 font-medium text-gray-600 transition-shadow" required />
-                                        <img src={deleteImage} alt="remove" onClick={() => removePoint(pi, field, ci)}
-                                            className="w-8 h-8 flex-shrink-0 cursor-pointer hover:scale-110 transition-transform" />
+                                            className="border hover:shadow-md focus:shadow-md rounded-xl outline-none w-full px-3 py-3 font-medium text-gray-600 transition-shadow" required={field === 'technologies'} />
+                                        <button type="button" aria-label={`Remove ${field} ${ci + 1} from project ${pi + 1}`} onClick={() => removePoint(pi, field, ci)}><img src={deleteImage} alt="" className="w-8 h-8 flex-shrink-0 hover:scale-110 transition-transform" /></button>
                                     </div>
                                 ))}
                                 <button type="button" onClick={() => addPoint(pi, field)}
@@ -196,9 +207,9 @@ export default function ProjectInfo() {
                         className="bg-gradient-to-bl from-violet-500 to-purple-700 text-white text-sm font-semibold py-2.5 px-5 rounded-lg hover:shadow-lg transition-all">
                         Add Project
                     </button>
-                    <button type="submit"
+                    <button type="submit" disabled={saving}
                         className="bg-gradient-to-bl from-violet-500 to-purple-700 text-white text-sm font-semibold py-2.5 px-5 rounded-lg hover:shadow-lg transition-all">
-                        Save Changes
+                        {saving ? 'Saving…' : 'Save Changes'}
                     </button>
                 </div>
             </form>
@@ -208,7 +219,7 @@ export default function ProjectInfo() {
                 <ul className="space-y-1">
                     {[
                         "If an image shows \"No file chosen\" after saving, the existing image is still there — only new selections replace it.",
-                        "Your draft auto-saves as you type so a refresh won't lose your work.",
+                        "Text drafts save in this browser. Reselect any new image files after a refresh.",
                         "Add a GitHub or live demo link so viewers can explore your work directly.",
                     ].map((tip, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-gray-600">

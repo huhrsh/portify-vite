@@ -6,6 +6,7 @@ import { db } from "../Firebase";
 import { toast } from "react-toastify";
 import deleteImage from "../Assets/Images/cross-circle.png";
 import upArrow from "../Assets/Images/up-arrow.png";
+import { getSectionOrder } from '../profileSections';
 
 const CARD_TYPES = [
     { value: "text",       label: "Text Block",         desc: "A heading with body text and optional link." },
@@ -51,7 +52,7 @@ async function uploadToCloudinary(file) {
     return data.secure_url;
 }
 
-function ImageUploader({ value, onChange, uid, cardId, label: fieldLabel = "Image" }) {
+function ImageUploader({ value, onChange, label: fieldLabel = "Image" }) {
     const fileRef = useRef();
     const [uploading, setUploading] = useState(false);
 
@@ -105,7 +106,6 @@ function CardEditor({ card, onChange, onRemove, uid }) {
     const addLink = () => set("links", [...card.links, { label: "", url: "" }]);
     const removeLink = (i) => set("links", card.links.filter((_, idx) => idx !== i));
     const setGalleryImg = (i, val) => { const a = [...(card.images || [])]; a[i] = val; set("images", a); };
-    const addGalleryImg = () => set("images", [...(card.images || []), ""]);
     const removeGalleryImg = (i) => set("images", (card.images || []).filter((_, idx) => idx !== i));
 
     const typeInfo = CARD_TYPES.find(t => t.value === card.type);
@@ -303,19 +303,19 @@ export default function CustomSectionInfo() {
         if (draftKey) {
             try {
                 const saved = JSON.parse(localStorage.getItem(draftKey));
-                if (saved?.length && JSON.stringify(saved) !== JSON.stringify(user.customSections || [])) {
+                if (Array.isArray(saved) && JSON.stringify(saved) !== JSON.stringify(user.customSections || [])) {
                     setHasDraft(true);
                     setSections(saved);
                     return;
                 }
-            } catch {}
+            } catch { /* Browser draft storage may be unavailable. */ }
         }
         setSections(user?.customSections?.length ? user.customSections : []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
-    const saveDraft = (data) => { if (draftKey) try { localStorage.setItem(draftKey, JSON.stringify(data)); } catch {} };
-    const clearDraft = () => { if (draftKey) localStorage.removeItem(draftKey); setHasDraft(false); };
+    const saveDraft = (data) => { if (draftKey) try { localStorage.setItem(draftKey, JSON.stringify(data)); } catch { /* Browser draft storage may be unavailable. */ } };
+    const clearDraft = () => { try { if (draftKey) localStorage.removeItem(draftKey); } catch { /* Browser draft storage may be unavailable. */ } setHasDraft(false); };
 
     const discardDraft = () => {
         clearDraft();
@@ -323,7 +323,7 @@ export default function CustomSectionInfo() {
         toast.info("Draft discarded.");
     };
 
-    const update = (data) => { setSections(data); saveDraft(data); };
+    const update = (data) => { setSections(data); saveDraft(data); setHasDraft(true); };
     const updateSection = (i, s) => { const n = [...sections]; n[i] = s; update(n); };
     const deleteSection = (i) => update(sections.filter((_, idx) => idx !== i));
     const addSection = () => { const s = newSection(); update([...sections, s]); navigate(`/dashboard/custom-sections/${s.id}`); };
@@ -332,9 +332,10 @@ export default function CustomSectionInfo() {
         if (sections.some(s => !s.title.trim())) { toast.error("Every section needs a title."); return; }
         setLoading(true);
         try {
-            await updateDoc(doc(db, "users", user.uid), { customSections: sections });
-            setUser({ ...user, customSections: sections });
+            const navOrder = getSectionOrder({ ...user, customSections: sections });
+            await updateDoc(doc(db, "users", user.uid), { customSections: sections, navOrder });
             clearDraft();
+            setUser(current => ({ ...current, customSections: sections, navOrder }));
             toast.success("Custom sections saved.");
         } catch {
             toast.error("Failed to save. Please try again.");
@@ -407,7 +408,7 @@ export default function CustomSectionInfo() {
                 </>
             )}
 
-            {sections.length > 0 && (
+            {(sections.length > 0 || hasDraft) && (
                 <button type="button" onClick={handleSave}
                     className="bg-gradient-to-bl hover:shadow-lg hover:shadow-purple-200 duration-200 from-violet-500 to-purple-700 transition-all w-fit px-6 text-base font-semibold rounded-lg py-2.5 text-white">
                     Save Changes
@@ -423,7 +424,7 @@ export default function CustomSectionInfo() {
                         "Mix card types freely — timeline for a journey, quotes for testimonials, link grids for resources.",
                         "Upload images directly or paste image URLs — both work.",
                         "Your draft auto-saves so a refresh won't lose your work.",
-                        "Sections appear in your portfolio nav after your standard sections.",
+                        "Arrange standard and custom sections together from Section Order.",
                     ].map((tip, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                             <span className="text-purple-400 mt-0.5">›</span> {tip}

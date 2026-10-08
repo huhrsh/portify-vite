@@ -106,7 +106,7 @@ function EduCard({ edu, cardKey, currentOpen, setCurrentOpen, isDoc, docCount, o
                             className="border px-2 py-4 rounded-xl text-base font-medium w-1/3 text-gray-600 outline-none max-sm:w-full"
                             name="gradeType" value={edu.data.gradeType || ''} onChange={e => onChange(index, e, isDoc)}
                         >
-                            <option value="" disabled>Select grade type <Req /></option>
+                            <option value="" disabled>Select grade type *</option>
                             <option value="cgpa_4">CGPA (out of 4)</option>
                             <option value="cgpa_10">CGPA (out of 10)</option>
                             <option value="grade">Grade</option>
@@ -152,7 +152,7 @@ export default function EducationInfo() {
                     applyData(saved);
                     return;
                 }
-            } catch {}
+            } catch { /* Browser draft storage may be unavailable. */ }
         }
         applyData(user.education);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,11 +160,11 @@ export default function EducationInfo() {
 
     const saveDraft = (fixed, docs) => {
         if (!draftKey) return;
-        try { localStorage.setItem(draftKey, JSON.stringify([...fixed, ...docs])); } catch {}
+        try { localStorage.setItem(draftKey, JSON.stringify([...fixed, ...docs])); } catch { /* Browser draft storage may be unavailable. */ }
     };
 
     const clearDraft = () => {
-        if (draftKey) localStorage.removeItem(draftKey);
+        try { if (draftKey) localStorage.removeItem(draftKey); } catch { /* Browser draft storage may be unavailable. */ }
         setHasDraft(false);
     };
 
@@ -235,7 +235,7 @@ export default function EducationInfo() {
     return (
         <section className="flex gap-4 flex-col font-[raleway]">
             <div className="flex items-start justify-between gap-4">
-                <h2 className="text-purple-700 text-3xl font-bold max-sm:text-2xl">Let's talk academics</h2>
+                <h2 className="text-purple-700 text-3xl font-bold max-sm:text-2xl">Let&apos;s talk academics</h2>
                 <button type="button" onClick={clearAll} className="text-sm text-gray-400 hover:text-rose-500 transition-colors flex-shrink-0 mt-1">
                     Clear all
                 </button>

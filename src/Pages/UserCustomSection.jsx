@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useOutletContext } from "react-router-dom";
+import { normalizeWebUrl } from '../profileLinks';
 
 function LazyImg({ src, alt, className }) {
     const [state, setState] = useState('loading'); // 'loading' | 'loaded' | 'error'
@@ -30,7 +31,7 @@ function CardRenderer({ card }) {
                 <div className="custom-card">
                     {card.title && <h3 className="custom-card-title">{card.title}</h3>}
                     {card.body  && <p  className="custom-card-body">{card.body}</p>}
-                    {card.link  && <a href={card.link} target="_blank" rel="noopener noreferrer" className="custom-card-link">Learn more →</a>}
+                    {normalizeWebUrl(card.link) && <a href={normalizeWebUrl(card.link)} target="_blank" rel="noopener noreferrer" className="custom-card-link">Learn more →</a>}
                 </div>
             );
 
@@ -44,7 +45,7 @@ function CardRenderer({ card }) {
                     <div className="flex flex-col gap-2 flex-1">
                         {card.title && <h3 className="custom-card-title">{card.title}</h3>}
                         {card.body  && <p  className="custom-card-body">{card.body}</p>}
-                        {card.link  && <a href={card.link} target="_blank" rel="noopener noreferrer" className="custom-card-link">Learn more →</a>}
+                        {normalizeWebUrl(card.link) && <a href={normalizeWebUrl(card.link)} target="_blank" rel="noopener noreferrer" className="custom-card-link">Learn more →</a>}
                     </div>
                 </div>
             );
@@ -60,7 +61,7 @@ function CardRenderer({ card }) {
                             </li>
                         ))}
                     </ul>
-                    {card.link && <a href={card.link} target="_blank" rel="noopener noreferrer" className="custom-card-link mt-3 inline-block">Learn more →</a>}
+                    {normalizeWebUrl(card.link) && <a href={normalizeWebUrl(card.link)} target="_blank" rel="noopener noreferrer" className="custom-card-link mt-3 inline-block">Learn more →</a>}
                 </div>
             );
 
@@ -69,8 +70,8 @@ function CardRenderer({ card }) {
                 <div className="custom-card">
                     {card.title && <h3 className="custom-card-title">{card.title}</h3>}
                     <div className="flex flex-wrap gap-3 mt-3">
-                        {card.links?.filter(l => l.label || l.url).map((lnk, i) => (
-                            <a key={i} href={lnk.url} target="_blank" rel="noopener noreferrer"
+                        {card.links?.filter(l => normalizeWebUrl(l.url)).map((lnk, i) => (
+                            <a key={i} href={normalizeWebUrl(lnk.url)} target="_blank" rel="noopener noreferrer"
                                 className="custom-card-link border rounded-lg px-4 py-2 text-sm font-medium transition-all hover:opacity-80">
                                 {lnk.label || lnk.url}
                             </a>
@@ -97,7 +98,7 @@ function CardRenderer({ card }) {
         case "quote":
             return (
                 <div className="custom-card relative">
-                    <span className="text-5xl leading-none opacity-15 absolute top-3 left-4 select-none font-serif">"</span>
+                    <span className="text-5xl leading-none opacity-15 absolute top-3 left-4 select-none font-serif">&quot;</span>
                     {card.title  && <h3 className="custom-card-title pl-8">{card.title}</h3>}
                     {card.body   && <p  className="custom-card-body italic pl-8 pt-2">{card.body}</p>}
                     {card.author && <p  className="custom-card-body text-sm font-semibold mt-3 pl-8 opacity-60">— {card.author}</p>}
@@ -129,7 +130,7 @@ const LAYOUT_CLASSES = {
 };
 
 const isCardPopulated = (card) =>
-    card.title || card.body || card.items?.some(Boolean) ||
+    card.title || card.body || card.imageUrl || card.date || card.author || card.link || card.items?.some(Boolean) ||
     card.links?.some(l => l.url) || card.images?.some(Boolean);
 
 export default function UserCustomSection() {

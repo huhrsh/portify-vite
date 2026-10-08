@@ -56,6 +56,8 @@ export default function SignIn() {
             } else if (adminSnap.exists()) {
                 setUser({ uid: result.user.uid, ...adminSnap.data(), admin: true });
                 navigate('/admin-dashboard');
+            } else {
+                toast.error('Your account profile is missing. Please contact support.');
             }
             setEmail(""); setPassword("");
         } catch (error) {
@@ -103,16 +105,16 @@ export default function SignIn() {
         'border hover:shadow-md focus-within:shadow-md p-3 py-0 rounded-xl transition-all duration-200 flex w-full gap-3 items-center';
 
     return (
-        <main className="w-screen px-48 max-sm:px-6 h-[88vh] max-sm:h-auto font-[raleway] gap-12 flex items-center justify-between max-sm:flex-col max-sm:py-10">
+        <main className="w-screen px-8 xl:px-24 max-lg:px-6 min-h-[80vh] max-lg:h-auto font-[raleway] gap-12 flex items-center justify-between max-lg:flex-col max-lg:py-10">
             <img
-                className="max-sm:hidden w-[42%] max-w-lg object-contain"
+                className="max-lg:hidden w-[42%] max-w-lg object-contain"
                 alt="Welcome back"
                 src={signInImage}
             />
 
-            <form className="flex flex-col gap-4 w-6/12 justify-center pb-8 rounded-xl h-full p-6 px-10 max-sm:px-0 max-sm:w-full">
+            <form onSubmit={handleSignIn} className="flex flex-col gap-4 w-6/12 justify-center pb-8 rounded-xl h-full p-6 px-10 max-lg:px-0 max-lg:w-full">
                 <div className="mb-2">
-                    <h1 className="text-4xl max-sm:text-3xl font-bold text-transparent bg-gradient-to-tl from-violet-600 to-purple-700 bg-clip-text">
+                    <h1 className="text-4xl max-lg:text-3xl font-bold text-transparent bg-gradient-to-tl from-violet-600 to-purple-700 bg-clip-text">
                         Welcome back
                     </h1>
                     <p className="text-gray-500 text-sm mt-1">Sign in to continue to your portfolio</p>
@@ -122,6 +124,8 @@ export default function SignIn() {
                     <h2 className="text-purple-700 text-sm font-semibold flex-shrink-0">Email</h2>
                     <input
                         ref={emailRef}
+                        aria-label="Email"
+                        autoComplete="email"
                         className="outline-none w-full px-2 py-4 font-medium text-gray-600 bg-transparent"
                         type="email"
                         placeholder="jane@example.com"
@@ -134,18 +138,17 @@ export default function SignIn() {
                     <h2 className="text-purple-700 text-sm font-semibold flex-shrink-0">Password</h2>
                     <input
                         ref={pwRef}
+                        aria-label="Password"
+                        autoComplete="current-password"
                         className="outline-none w-full px-2 py-4 font-medium text-gray-600 bg-transparent"
                         type={visiblePw ? "text" : "password"}
                         placeholder="Your password"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                     />
-                    <img
-                        className="h-5 pr-1 cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
-                        src={visiblePw ? eyebrow : eye}
+                    <button type="button" aria-label={visiblePw ? 'Hide password' : 'Show password'} aria-pressed={visiblePw}
                         onClick={() => setVisiblePw(v => !v)}
-                        alt="toggle visibility"
-                    />
+                    ><img className="h-5 pr-1 opacity-60 hover:opacity-100" src={visiblePw ? eyebrow : eye} alt="" /></button>
                 </div>
 
                 <div className="flex justify-end -mt-2">
@@ -160,13 +163,14 @@ export default function SignIn() {
                 <div className="flex flex-wrap gap-3 mt-1">
                     <button
                         className="bg-gradient-to-bl hover:shadow-lg hover:shadow-purple-200 duration-200 from-violet-500 to-purple-700 transition-all px-6 text-sm font-semibold rounded-lg py-2.5 text-white"
-                        onClick={handleSignIn}
+                        type="submit"
                     >
                         Sign In
                     </button>
                     <button
                         className="flex gap-2 items-center border border-gray-200 hover:border-purple-300 hover:shadow-sm duration-200 transition-all px-4 py-2.5 text-sm font-semibold rounded-lg text-gray-700"
                         onClick={signInWithGoogle}
+                        type="button"
                     >
                         <img className="h-5" src={google} alt="google" />
                         Continue with Google
@@ -174,7 +178,7 @@ export default function SignIn() {
                 </div>
 
                 <Link className="text-sm text-gray-500 hover:text-purple-700 transition-colors" to="/sign-up">
-                    Don't have an account? <span className="font-semibold text-purple-700">Sign up</span>
+                    Don&apos;t have an account? <span className="font-semibold text-purple-700">Sign up</span>
                 </Link>
             </form>
         </main>

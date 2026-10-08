@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { getAnalytics, isSupported } from "firebase/analytics";
 import { browserLocalPersistence, getAuth, setPersistence, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
@@ -18,8 +18,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-setPersistence(auth, browserLocalPersistence);
-const analytics = getAnalytics(app);
+setPersistence(auth, browserLocalPersistence).catch(() => { /* Auth can continue with its default persistence. */ });
+isSupported().then(supported => {
+    if (supported) getAnalytics(app);
+}).catch(() => { /* Analytics is optional in restricted browsers. */ });
 const provider = new GoogleAuthProvider();
 
 export { auth, db, provider, storage };

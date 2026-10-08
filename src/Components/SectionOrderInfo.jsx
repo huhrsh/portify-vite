@@ -3,8 +3,7 @@ import { useUser } from "../Context";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../Firebase";
 import { toast } from "react-toastify";
-
-const STANDARD_SECTIONS = ["education", "projects", "experience", "certifications", "skills", "contacts"];
+import { STANDARD_SECTIONS, getSectionOrder } from '../profileSections';
 
 const SECTION_META = {
     education:      { label: "Education",      color: "bg-emerald-400" },
@@ -20,18 +19,7 @@ const SECTION_META = {
 function buildUnifiedList(user) {
     const selected   = user.selectedSections || {};
     const customs    = user.customSections   || [];
-    const customIds  = new Set(customs.map(s => s.id));
-
-    // Start from saved navOrder if present
-    const saved = (user.navOrder || []).filter(id =>
-        STANDARD_SECTIONS.includes(id) || customIds.has(id)
-    );
-
-    // Add any standard sections not yet in navOrder
-    STANDARD_SECTIONS.forEach(s => { if (!saved.includes(s)) saved.push(s); });
-
-    // Add any new custom sections not yet in navOrder
-    customs.forEach(s => { if (!saved.includes(s.id)) saved.push(s.id); });
+    const saved = getSectionOrder(user);
 
     return saved.map(id => {
         if (STANDARD_SECTIONS.includes(id)) {
@@ -63,6 +51,14 @@ export default function SectionOrderInfo() {
         const next = { ...selected, [id]: !selected[id] };
         setSelected(next);
         setItems(prev => prev.map(it => it.id === id ? { ...it, enabled: !it.enabled } : it));
+    };
+
+    const moveItem = (index, direction) => {
+        const target = index + direction;
+        if (target < 0 || target >= items.length) return;
+        const next = [...items];
+        [next[index], next[target]] = [next[target], next[index]];
+        setItems(next);
     };
 
     // ── Mouse / pointer drag ──
@@ -131,7 +127,7 @@ export default function SectionOrderInfo() {
                 sectionOrder,
                 customSections,
             });
-            setUser({ ...user, selectedSections: selected, navOrder, sectionOrder, customSections });
+            setUser(current => ({ ...current, selectedSections: selected, navOrder, sectionOrder, customSections }));
             toast.success("Sections updated.");
         } catch {
             toast.error("Failed to save. Please try again.");
@@ -166,7 +162,7 @@ export default function SectionOrderInfo() {
                                 onDrop={() => onDrop(i)}
                                 onDragEnd={onDragEnd}
                                 onTouchStart={e => onTouchStart(e, i)}
-                                className={`flex items-center gap-4 px-4 py-3 rounded-xl border transition-all duration-150 cursor-grab active:cursor-grabbing select-none
+                                className={`flex items-center gap-2 px-3 py-3 rounded-xl border transition-all duration-150 cursor-grab active:cursor-grabbing select-none
                                     ${dragIdx === i ? 'opacity-40 scale-95' : 'opacity-100'}
                                     ${overIdx === i ? 'border-purple-400 bg-purple-50 shadow-md'
                                         : item.enabled ? 'border-purple-200 bg-white shadow-sm'
@@ -181,7 +177,7 @@ export default function SectionOrderInfo() {
 
                                 <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${item.color} ${!item.enabled ? 'opacity-30' : ''}`} />
 
-                                <span className={`flex-1 text-sm font-semibold ${item.enabled ? 'text-gray-700' : 'text-gray-400'}`}>
+                                <span className={`flex-1 min-w-0 break-words text-sm font-semibold ${item.enabled ? 'text-gray-700' : 'text-gray-400'}`}>
                                     {item.label}
                                     {item.type === 'custom' && (
                                         <span className="ml-2 text-xs font-normal text-violet-400 bg-violet-50 px-1.5 py-0.5 rounded-full">custom</span>
@@ -192,10 +188,17 @@ export default function SectionOrderInfo() {
                                     <span className="text-xs font-bold text-purple-400 w-5 text-center">{pos}</span>
                                 )}
 
+                                <div className="flex gap-1" onTouchStart={event => event.stopPropagation()}>
+                                    <button type="button" aria-label={`Move ${item.label} up`} disabled={i === 0} onClick={() => moveItem(i, -1)} className="px-2 py-1 rounded border text-purple-700 disabled:opacity-30">↑</button>
+                                    <button type="button" aria-label={`Move ${item.label} down`} disabled={i === items.length - 1} onClick={() => moveItem(i, 1)} className="px-2 py-1 rounded border text-purple-700 disabled:opacity-30">↓</button>
+                                </div>
+
                                 {/* toggle — only for standard sections */}
                                 {item.type === 'standard' ? (
                                     <button
                                         type="button"
+                                        aria-label={`Show ${item.label}`}
+                                        aria-pressed={item.enabled}
                                         onClick={() => toggleItem(item.id)}
                                         className={`relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0 overflow-hidden
                                             ${item.enabled ? 'bg-purple-600' : 'bg-gray-200'}`}

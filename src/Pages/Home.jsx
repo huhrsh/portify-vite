@@ -91,7 +91,7 @@ export default function Home() {
                                     to="/sign-up"
                                     className="rounded-lg px-6 py-3 text-sm font-semibold transition-all duration-200 text-white shadow-md hover:shadow-lg bg-gradient-to-tr from-purple-700 to-violet-500 hover:from-purple-800 hover:to-violet-600"
                                 >
-                                    Get Started — It's Free
+                                    Get Started — It&apos;s Free
                                 </Link>
                                 <Link
                                     to="/sign-in"
@@ -149,7 +149,7 @@ export default function Home() {
                             <div className="flex flex-col w-full h-full gap-4 absolute left-0 top-0 border border-purple-200 rounded-2xl bg-white shadow-sm shadow-purple-100 p-6">
                                 <Rating defaultValue={REVIEWS[currentSlide].rating} size="small" readOnly />
                                 <p className="text-gray-700 font-medium leading-relaxed text-base flex-1">
-                                    "{REVIEWS[currentSlide].text}"
+                                    &quot;{REVIEWS[currentSlide].text}&quot;
                                 </p>
                                 <p className="text-sm text-purple-500 font-semibold">— {REVIEWS[currentSlide].author}</p>
                             </div>

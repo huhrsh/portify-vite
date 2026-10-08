@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Outlet, Link, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { profileSeo } from '../profileSeo';
 import { db } from "../Firebase";
-import { query, collection, where, getDocs, doc, updateDoc, increment, getDoc, setDoc } from "firebase/firestore";
+import { query, collection, where, getDocs, doc, updateDoc, increment } from "firebase/firestore";
+import { getPublicSections } from '../profileSections';
 import { toast } from "react-toastify";
 import boldPurpleBackground from "../Assets/Images/pexels-tuesday-temptation-190692-3780104.jpg";
 import simplyBlackBackground from "../Assets/Images/pexels-danielabsi-952670.jpg";
@@ -26,18 +27,16 @@ const backgroundImages = {
     "editorial-ink":    null,
 };
 
-const DEFAULT_SECTION_ORDER = ['education', 'projects', 'experience', 'certifications', 'skills', 'contacts'];
-
 async function trackView(userId) {
     const dateKey  = new Date().toISOString().slice(0, 10);
     const visitKey = `portify-visited-${userId}-${dateKey}`;
-    if (localStorage.getItem(visitKey)) return;
-    localStorage.setItem(visitKey, "1");
     try {
+        if (localStorage.getItem(visitKey)) return;
         const userRef = doc(db, "users", userId);
         const update  = { totalViews: increment(1), [`viewsByDate.${dateKey}`]: increment(1) };
         await updateDoc(userRef, update);
-    } catch {}
+        localStorage.setItem(visitKey, "1");
+    } catch { /* Analytics must never prevent a public profile from loading. */ }
 }
 
 export default function UserHeader() {
@@ -46,15 +45,21 @@ export default function UserHeader() {
     const location = useLocation();
     const [loading, setLoading] = useState(true);
     const [userDetails, setUserDetails] = useState(null);
-    const [sections, setSections] = useState([]);
     const [openMenu, setOpenMenu] = useState(false);
+    const [compactNav, setCompactNav] = useState(true);
+    const headerRef = useRef(null);
+    const navRef = useRef(null);
+    const menuRef = useRef(null);
+    const sections = getPublicSections(userDetails);
 
     useEffect(() => {
         setLoading(true);
+        let cancelled = false;
         const fetchUser = async () => {
             try {
                 const q = query(collection(db, 'users'), where('username', '==', username), where('websiteStatus', '==', 'active'));
                 const snapshot = await getDocs(q);
+                if (cancelled) return;
                 if (snapshot.empty) {
                     navigate('/no-user');
                     return;
@@ -67,42 +72,46 @@ export default function UserHeader() {
                 setUserDetails(userData);
                 trackView(snapshot.docs[0].id);
             } catch (error) {
+                if (cancelled) return;
                 toast.error("An error occurred while fetching user data.");
                 navigate('/no-user');
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
         fetchUser();
+        return () => { cancelled = true; };
     }, [username, navigate]);
 
     useEffect(() => {
-        if (!userDetails) return;
-        const customMap = Object.fromEntries(
-            (userDetails.customSections || []).map(s => [s.id, s])
-        );
-        const customIds = new Set(Object.keys(customMap));
+        const header = headerRef.current;
+        const nav = navRef.current;
+        if (!header || !nav) return;
+        let active = true;
+        const measure = () => {
+            if (!active) return;
+            const padding = getComputedStyle(header);
+            const available = header.clientWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight);
+            const nameWidth = header.querySelector('.username-heading').getBoundingClientRect().width;
+            setCompactNav(window.innerWidth < 640 || nameWidth + nav.getBoundingClientRect().width + 32 > available);
+        };
+        const observer = new ResizeObserver(measure);
+        observer.observe(header);
+        observer.observe(nav);
+        measure();
+        document.fonts.ready.then(measure);
+        return () => { active = false; observer.disconnect(); };
+    }, [userDetails, loading]);
 
-        if (userDetails.navOrder?.length) {
-            // Unified order: mix standard and custom as the user arranged them
-            const nav = userDetails.navOrder
-                .map(id => {
-                    if (DEFAULT_SECTION_ORDER.includes(id)) {
-                        return userDetails.selectedSections?.[id] ? { label: id, to: id } : null;
-                    }
-                    const cs = customMap[id];
-                    return cs ? { label: cs.title || "Custom", to: `custom/${cs.id}` } : null;
-                })
-                .filter(Boolean);
-            setSections(nav);
-        } else {
-            // Legacy fallback
-            const order = userDetails.sectionOrder?.length ? userDetails.sectionOrder : DEFAULT_SECTION_ORDER;
-            const standard = order.filter(s => userDetails.selectedSections?.[s]).map(s => ({ label: s, to: s }));
-            const custom = (userDetails.customSections || []).map(s => ({ label: s.title || "Custom", to: `custom/${s.id}` }));
-            setSections([...standard, ...custom]);
-        }
-    }, [userDetails]);
+    useEffect(() => { setOpenMenu(false); }, [location.pathname]);
+    useEffect(() => {
+        if (!openMenu) return;
+        const closeOnEscape = event => {
+            if (event.key === 'Escape') { setOpenMenu(false); menuRef.current?.focus(); }
+        };
+        window.addEventListener('keydown', closeOnEscape);
+        return () => window.removeEventListener('keydown', closeOnEscape);
+    }, [openMenu]);
 
     if (loading) return <UserLoading username={username} />;
 
@@ -131,7 +140,9 @@ export default function UserHeader() {
             </Helmet>
 
             <header
-                className={`${style}-user-header`}
+                ref={headerRef}
+                className={`${style}-user-header portfolio-header`}
+                data-compact={compactNav}
                 style={{ fontFamily }}
             >
                 <Link
@@ -142,21 +153,22 @@ export default function UserHeader() {
                     {userDetails.username}
                 </Link>
 
-                {openMenu
-                    ? <img src={cross} alt="close" className="cross" onClick={() => setOpenMenu(false)} />
-                    : <img src={menu} alt="menu" className="menu" onClick={() => setOpenMenu(true)} />
-                }
+                {compactNav && <button ref={menuRef} type="button" className="portfolio-menu-toggle" aria-label={openMenu ? 'Close navigation' : 'Open navigation'} aria-expanded={openMenu} aria-controls="portfolio-mobile-nav" onClick={() => setOpenMenu(value => !value)}>
+                    <img src={openMenu ? cross : menu} alt="" className={openMenu ? 'cross' : 'menu'} />
+                </button>}
 
-                {openMenu && (
-                    <div
+                {openMenu && compactNav && (
+                    <nav
+                        id="portfolio-mobile-nav"
+                        aria-label="Portfolio sections"
                         className="mobile-header animate__animated animate__fadeInUp"
                         style={{ fontFamily }}
                     >
-                        {sections.map((section, i) => {
+                        {sections.map((section) => {
                             const isActive = location.pathname.endsWith(section.to);
                             return (
                                 <Link
-                                    key={i}
+                                    key={section.id}
                                     to={section.to}
                                     className={isActive ? 'mobile-header-active-link' : 'mobile-header-links'}
                                     onClick={() => setOpenMenu(false)}
@@ -165,15 +177,15 @@ export default function UserHeader() {
                                 </Link>
                             );
                         })}
-                    </div>
+                    </nav>
                 )}
 
-                <div className="desktop-header" style={{ fontFamily }}>
-                    {sections.map((section, i) => {
+                <nav ref={navRef} className="desktop-header" aria-label="Portfolio sections" aria-hidden={compactNav} style={{ fontFamily }}>
+                    {sections.map((section) => {
                         const isActive = location.pathname.endsWith(section.to);
                         return (
                             <Link
-                                key={i}
+                                key={section.id}
                                 to={section.to}
                                 className={isActive ? 'desktop-header-active-link' : 'desktop-header-links'}
                             >
@@ -181,7 +193,7 @@ export default function UserHeader() {
                             </Link>
                         );
                     })}
-                </div>
+                </nav>
             </header>
 
             {bgImage && (
@@ -192,7 +204,7 @@ export default function UserHeader() {
             )}
             {!bgImage && <div className={`${style}-div`} />}
 
-            <main className={`${style}-main`}>
+            <main className={`${style}-main`} style={{ fontFamily }}>
                 <Outlet context={{ userDetails, setLoading }} />
                 <footer className="footer">
                     Made with&nbsp;

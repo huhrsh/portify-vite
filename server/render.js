@@ -1,4 +1,5 @@
-import { profileSeo, PROFILE_SECTIONS } from '../src/profileSeo.js';
+import { profileSeo } from '../src/profileSeo.js';
+import { getPublicSections } from '../src/profileSections.js';
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 export function stripMetadata(html) {
     return html.replace(/<title>[\s\S]*?<\/title>/gi, '')
@@ -9,7 +10,7 @@ export function renderProfile(template, user, pathname, origin) {
     const seo = profileSeo(user, pathname, origin);
     const section = pathname.split('/').filter(Boolean).slice(1).join('/');
     const custom = (user.customSections || []).find(s => `custom/${s.id}` === section);
-    const navigation = [...PROFILE_SECTIONS.filter(s => user.selectedSections?.[s]).map(s => ({ path: s, title: s })), ...(user.customSections || []).map(s => ({ path: `custom/${encodeURIComponent(s.id)}`, title: s.title }))].map(s => `<a href="/${escapeHtml(user.username)}/${escapeHtml(s.path)}">${escapeHtml(s.title)}</a>`).join(' · ');
+    const navigation = getPublicSections(user).map(s => `<a href="/${escapeHtml(user.username)}/${escapeHtml(s.to.split('/').map(encodeURIComponent).join('/'))}">${escapeHtml(s.label)}</a>`).join(' · ');
     // Only fields displayed by public portfolio pages are included; never serialize the user document.
     const visibleKeys = ['projectTitle', 'tagline', 'heading', 'points', 'role', 'company', 'level', 'data', 'institution', 'start', 'end', 'board', 'grade', 'degree', 'branch', 'title', 'description', 'organizer', 'issueDate', 'validity', 'name', 'label', 'value', 'body', 'cards', 'items'];
     function content(value) {
