@@ -9,7 +9,7 @@ export default function UserSkills() {
         window.scrollTo(0, 0);
     },[])
 
-    if(!skills){
+    if(!skills?.length){
         return(
             <h1 style={{ fontFamily: userDetails.selectedFont ? userDetails.selectedFont : 'Outfit' }} className="nothing-to-show">Nothing to show here</h1>
         )
@@ -23,7 +23,7 @@ export default function UserSkills() {
                         <div key={index} className="skill-container">
                             <h3 className="skill-heading">{skill.heading}</h3>
                             <ul className="skill-list">
-                                {skill.points.map((point, idx) => (
+                                {(skill.points || []).map((point, idx) => (
                                     <li key={idx} className="skill-point">{point}</li>
                                 ))}
                             </ul>
@@ -37,7 +37,7 @@ export default function UserSkills() {
                         <div key={index} className="masonry-item">
                             <h3 className="skill-heading">{skill.heading}</h3>
                             <ul className="skill-list">
-                                {skill.points.map((point, idx) => (
+                                {(skill.points || []).map((point, idx) => (
                                     <li key={idx} className="skill-point">{point}</li>
                                 ))}
                             </ul>

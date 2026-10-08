@@ -118,7 +118,7 @@ const FONTS = ["raleway", "outfit", "poppins", "afacad", "josefin", "lato", "int
 function StyleCard({ style, selected, onSelect }) {
     const p = style.preview;
     return (
-        <div
+        <button type="button" aria-pressed={selected} aria-label={style.name}
             onClick={() => onSelect(style.value)}
             className={`cursor-pointer rounded-xl overflow-hidden border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]
                 ${selected ? 'border-purple-600 shadow-md shadow-purple-200' : 'border-transparent hover:border-purple-300'}`}
@@ -144,7 +144,7 @@ function StyleCard({ style, selected, onSelect }) {
                 <span className="font-semibold text-gray-700 text-sm">{style.name}</span>
                 <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">{p.tag}</span>
             </div>
-        </div>
+        </button>
     );
 }
 
@@ -214,11 +214,11 @@ export default function ThemeInfo() {
 
             {/* ── Fonts ── */}
             <h2 className="text-purple-700 text-3xl font-bold mb-1 max-sm:text-2xl">Choose Your Font</h2>
-            <p className="text-gray-500 text-sm mb-5">Your chosen font applies across your entire portfolio.</p>
+            <p className="text-gray-500 text-sm mb-5">Choose your portfolio body font. Some themes keep their signature heading fonts.</p>
 
             <div className="grid grid-cols-4 gap-3 max-sm:grid-cols-2 mb-4">
                 {FONTS.map(font => (
-                    <div
+                    <button type="button" aria-pressed={font === selectedFont}
                         key={font}
                         onClick={() => handleFontChange(font)}
                         className={`py-3 px-2 flex items-center justify-center cursor-pointer border rounded-xl hover:shadow-md transition-all duration-200
@@ -229,7 +229,7 @@ export default function ThemeInfo() {
                         style={{ fontFamily: font }}
                     >
                         <span className="text-gray-700 font-medium text-sm capitalize">{font}</span>
-                    </div>
+                    </button>
                 ))}
             </div>
 

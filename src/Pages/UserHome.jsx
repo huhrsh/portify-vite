@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
+import { getPublicSections } from '../profileSections';
+import { contactHref } from '../profileLinks';
 
 export default function UserHome() {
     const { userDetails } = useOutletContext();
@@ -9,15 +11,10 @@ export default function UserHome() {
         window.scrollTo(0, 0);
     }, []);
 
-    const desiredOrder = ['education', 'projects', 'experience', 'certifications', 'skills', 'contacts'];
-    const activeSections = userDetails.selectedSections
-        ? Object.keys(userDetails.selectedSections)
-              .filter(s => userDetails.selectedSections[s])
-              .sort((a, b) => desiredOrder.indexOf(a) - desiredOrder.indexOf(b))
-        : [];
+    const activeSections = getPublicSections(userDetails).slice(0, 5);
 
     const contactLinks = (userDetails.contacts || []).filter(c =>
-        ['LinkedIn', 'GitHub', 'Email', 'Website'].includes(c.label)
+        ['linkedin', 'github', 'email', 'website'].includes(c.label?.trim().toLowerCase()) && contactHref(c)
     ).slice(0, 4);
 
     return (
@@ -26,7 +23,7 @@ export default function UserHome() {
                 {userDetails.profession && (
                     <p className="hero-eyebrow">{userDetails.profession}</p>
                 )}
-                <h1 className="name">{userDetails.name}</h1>
+                <h1 className="name">{userDetails.name || userDetails.username}</h1>
 
                 {userDetails.about && (
                     <p className="about">{userDetails.about}</p>
@@ -34,24 +31,15 @@ export default function UserHome() {
 
                 {(activeSections.length > 0 || contactLinks.length > 0) && (
                     <div className="hero-cta">
-                        {activeSections.slice(0, 3).map(section => (
-                            <Link key={section} to={section} className="cta-link">
-                                {section}
-                            </Link>
-                        ))}
-                        {(userDetails.customSections || []).slice(0, 2).map(s => (
-                            <Link key={s.id} to={`custom/${s.id}`} className="cta-link">
-                                {s.title}
+                        {activeSections.map(section => (
+                            <Link key={section.id} to={section.to} className="cta-link">
+                                {section.label}
                             </Link>
                         ))}
                         {contactLinks.map((contact, i) => (
                             <a
                                 key={i}
-                                href={
-                                    contact.label === 'Email'   ? `mailto:${contact.value}` :
-                                    contact.label === 'Phone'   ? `tel:${contact.value}` :
-                                    contact.value
-                                }
+                                href={contactHref(contact)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="cta-link"

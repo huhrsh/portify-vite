@@ -1,15 +1,16 @@
-import { Link, useOutletContext } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 import React, { useEffect } from "react";
+import { contactHref } from '../profileLinks';
 
 export default function UserContacts() {
     const { userDetails } = useOutletContext();
-    const contacts = userDetails.contacts;
+    const contacts = (userDetails.contacts || []).filter(contact => contact.value?.trim());
 
     useEffect(()=>{
         window.scrollTo(0, 0);
     },[])
 
-    if(!contacts){
+    if(!contacts.length){
         return(
             <h1 style={{ fontFamily: userDetails.selectedFont ? userDetails.selectedFont : 'Outfit' }} className="nothing-to-show">Nothing to show here</h1>
         )
@@ -19,11 +20,11 @@ export default function UserContacts() {
         <div className="contact-outer-div" style={{ fontFamily: userDetails.selectedFont ? userDetails.selectedFont : 'Outfit' }}>
             <div className='contact-inner-div'>
                 {contacts.map((contact, index) => (
-                        <Link target="_blank" key={index} to={(contact.label==='Phone' && 'tel:'+contact.value) || (contact.label==='Email' && 'mailto:'+contact.value) || contact.value} className="group contact-div">
+                        <a target="_blank" rel="noopener noreferrer" key={index} href={contactHref(contact) || undefined} className="group contact-div">
                             <h3 className="contact-label">{contact.label} </h3>
-                            <p className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-sm group-hover:pl-3 contact-data max-sm:max-w-xs max-sm:pl-3">{contact.value}</p>
+                            <p className="contact-data">{contact.value}</p>
                             <span className="dash">|</span>
-                        </Link>
+                        </a>
 
                 ))}
             </div>

@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { Helmet } from 'react-helmet-async';
 import errorImage from "../Assets/Images/404 error with people holding the numbers-amico.png"
 

@@ -48,14 +48,14 @@ export default function ForgotPassword() {
                         Reset Password
                     </h1>
                     <p className="text-gray-500 text-sm mt-2">
-                        Enter the email address linked to your account and we'll send you a reset link.
+                        Enter the email address linked to your account and we&apos;ll send you a reset link.
                     </p>
                 </div>
 
                 {sent ? (
                     <div className="p-5 rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm">
                         <p className="font-semibold text-base mb-1">Check your inbox!</p>
-                        <p>We've sent a password reset link to <strong>{email}</strong>. It may take a minute to arrive.</p>
+                        <p>We&apos;ve sent a password reset link to <strong>{email}</strong>. It may take a minute to arrive.</p>
                     </div>
                 ) : (
                     <form className="flex flex-col gap-4" onSubmit={handleReset}>

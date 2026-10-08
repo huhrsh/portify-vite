@@ -1,14 +1,16 @@
-import { createRef, useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useRef, useEffect, useState } from "react"
 import { useUser } from "../Context"
 import { db } from "../Firebase"
 import { toast } from "react-toastify"
 import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore"
 
 const RESERVED = ['no-user', 'dashboard', 'sign-in', 'sign-up', 'admin-dashboard', 'forgot-password', 'api', 'assets'];
+const DEFAULT_SECTIONS = { education: true, projects: true, experience: true, certifications: true, skills: true, contacts: true };
+const SECTION_ORDER = ['education', 'projects', 'experience', 'certifications', 'skills', 'contacts'];
 
 export default function UsernameInfo() {
-    const usernameRef = createRef()
+    const usernameRef = useRef(null)
+    const availabilityRequest = useRef(0);
     const { user, setUser, setLoading } = useUser()
     const [username, setUsername] = useState("")
     const [availability, setAvailability] = useState(null); // null | 'checking' | 'available' | 'taken' | 'reserved' | 'invalid' | 'same'
@@ -21,14 +23,12 @@ export default function UsernameInfo() {
         contacts: true
     });
 
-    const desiredOrder = ['education', 'projects', 'experience', 'certifications', 'skills', 'contacts'];
-
     useEffect(() => {
         if (user) {
             setUsername(user.username ? user.username.toLowerCase() : "")
             const sortedSections = Object.fromEntries(
-                Object.entries(user.selectedSections || selectedSections).sort(
-                    ([sectionA], [sectionB]) => desiredOrder.indexOf(sectionA) - desiredOrder.indexOf(sectionB)
+                Object.entries(user.selectedSections || DEFAULT_SECTIONS).sort(
+                    ([sectionA], [sectionB]) => SECTION_ORDER.indexOf(sectionA) - SECTION_ORDER.indexOf(sectionB)
                 )
             );
             setSelectedSections(sortedSections);
@@ -38,19 +38,23 @@ export default function UsernameInfo() {
 
 
     const checkAvailability = async () => {
-        const val = username.toLowerCase();
+        const val = username.trim().toLowerCase();
+        const request = ++availabilityRequest.current;
         if (!val) { setAvailability('invalid'); return; }
         if (val === user.username) { setAvailability('same'); return; }
         if (RESERVED.includes(val)) { setAvailability('reserved'); return; }
-        const regex = /^[a-z0-9-_]+$/;
+        const regex = /^[a-z0-9_-]+$/;
         if (!regex.test(val)) { setAvailability('invalid'); return; }
         setAvailability('checking');
         try {
             const q = query(collection(db, 'users'), where('username', '==', val));
             const snap = await getDocs(q);
-            setAvailability(snap.empty ? 'available' : 'taken');
+            if (request === availabilityRequest.current) setAvailability(snap.empty ? 'available' : 'taken');
         } catch {
-            setAvailability(null);
+            if (request === availabilityRequest.current) {
+                setAvailability(null);
+                toast.error('Could not check availability. Please retry.');
+            }
         }
     };
 
@@ -63,44 +67,45 @@ export default function UsernameInfo() {
 
     async function handleUsernameChange(e) {
         e.preventDefault();
-        usernameRef.current.blur()
-        if (!username) {
+        usernameRef.current?.blur()
+        const value = username.trim().toLowerCase();
+        if (!value) {
             toast.warn("Username cannot be blank.")
             return;
         }
-        if (RESERVED.includes(username.toLowerCase())) {
+        if (RESERVED.includes(value)) {
             toast.warn("That username is reserved. Please choose a different one.");
             return;
         }
         // console.log(user.selectedSections)
         // console.log(selectedSections)
-        if (username === user.username && selectedSections === user.selectedSections) {
+        if (value === user.username && SECTION_ORDER.every(section => selectedSections[section] === user.selectedSections?.[section])) {
             toast.warn("No change detected.")
             return;
         }
         setLoading(true);
-        const regex = /^[a-z0-9-_]+$/;
+        const regex = /^[a-z0-9_-]+$/;
 
-        if (regex.test(username)) {
+        if (regex.test(value)) {
             try {
                 const userRef = collection(db, 'users');
-                const userQuery = query(userRef, where('username', '==', username.toLowerCase()));
+                const userQuery = query(userRef, where('username', '==', value));
                 const querySnapshot = await getDocs(userQuery);
 
                 if (querySnapshot.empty) {
                     await updateDoc(doc(db, 'users', user.uid), {
-                        username: username.toLowerCase(),
+                        username: value,
                         selectedSections: selectedSections
                     });
-                    setUser({ ...user, username:username.toLowerCase(), selectedSections })
+                    setUser(current => ({ ...current, username: value, selectedSections }))
                     // console.log("User updated");
                     toast.success("General section updated.")
-                } else if (username === user.username) {
+                } else if (value === user.username) {
                     await updateDoc(doc(db, 'users', user.uid), {
                         // username: username,
                         selectedSections: selectedSections
                     });
-                    setUser({ ...user, username:username.toLowerCase(), selectedSections })
+                    setUser(current => ({ ...current, username: value, selectedSections }))
                     // console.log("User updated");
                     toast.success("General section updated.")
                 } else {
@@ -108,6 +113,7 @@ export default function UsernameInfo() {
                 }
             } catch (error) {
                 console.error('Error updating user:', error);
+                toast.error('Failed to save general settings. Please retry.');
             }
         } else {
             toast.warn("Please enter a valid username.");
@@ -121,13 +127,14 @@ export default function UsernameInfo() {
             <div className="flex flex-col gap-2 pr-12 max-sm:pr-0 mb-2">
                 <div className="flex gap-3 items-center">
                     <div className='border hover:shadow-lg focus-within:shadow-lg group p-3 py-0 rounded-xl transition-all duration-200 flex flex-1 gap-3 items-center'>
-                        <h2 className='text-purple-700 text-lg font-medium'>Username:</h2>
+                        <label htmlFor="portfolio-username" className='text-purple-700 text-lg font-medium'>Username:</label>
                         <input
                             ref={usernameRef}
-                            className='outline-none w-full h-full px-2 py-4 font-medium text-gray-600'
+                            id="portfolio-username"
+                            className='outline-none w-full min-w-0 h-full px-2 py-4 font-medium text-gray-600'
                             type='text'
                             placeholder='johnDoe'
-                            onChange={e => { setUsername(e.target.value); setAvailability(null); }}
+                            onChange={e => { availabilityRequest.current++; setUsername(e.target.value); setAvailability(null); }}
                             value={username}
                         />
                     </div>
@@ -164,9 +171,9 @@ export default function UsernameInfo() {
                 </ul>
             </section>
             <h2 className='text-purple-700 text-3xl max-sm:text-2xl font-bold mt-8'>Please select the sections you want to display.</h2>
-            <div className="grid grid-cols-3 grid-flow-row max-sm:mb-3">
+            <div className="grid grid-cols-1 min-[380px]:grid-cols-2 md:grid-cols-3 gap-2 max-sm:mb-3">
                 {Object.entries(selectedSections).map(([section, isSelected]) => (
-                    <label key={section} className="flex items-center ml-4 mt-2 row-span-1 text-lg font-medium text-gray-600 capitalize">
+                    <label key={section} className="flex items-center min-h-11 text-base font-medium text-gray-600 capitalize">
                         <input
                             type="checkbox"
                             checked={isSelected}
@@ -181,7 +188,7 @@ export default function UsernameInfo() {
                 <h3 className="text-2xl max-sm:text-xl max-sm:mb-4 font-bold text-gray-600">Tips on selecting the right section</h3>
                 <ul>
                     <li className="list-disc ml-6 font-medium text-lg max-sm:text-base max-sm:ml-3 text-gray-700" >Showcase the sections that you are confident about.</li>
-                    <li className="list-disc ml-6 font-medium text-lg max-sm:text-base max-sm:ml-3 text-gray-700" >For example, if you don't have any work experience, do not select experience section.</li>
+                    <li className="list-disc ml-6 font-medium text-lg max-sm:text-base max-sm:ml-3 text-gray-700" >For example, if you don&apos;t have any work experience, do not select experience section.</li>
                     {/* <li className="list-disc ml-6 font-medium text-lg text-gray-700" >You can create only one website per user</li> */}
                 </ul>
             </section>

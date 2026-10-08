@@ -63,6 +63,12 @@ export default function AboutInfo() {
         const trimmedProfession = profession.trim();
         const trimmedAbout      = aboutText.trim();
 
+        if (!trimmedName) {
+            toast.warn('Name cannot be empty.');
+            nameInputRef.current?.focus();
+            return;
+        }
+
         if (!trimmedProfession) {
             toast.warn("Profession cannot be empty.");
             professionInputRef.current?.focus();
@@ -93,9 +99,9 @@ export default function AboutInfo() {
                 profession: trimmedProfession,
                 about: trimmedAbout,
             });
-            setUser({ ...user, name: trimmedName, profession: trimmedProfession, about: trimmedAbout });
             clearDraft();
             setHasDraft(false);
+            setUser(current => ({ ...current, name: trimmedName, profession: trimmedProfession, about: trimmedAbout }));
             toast.success("About section updated.");
         } catch {
             toast.error("Error saving. Please try again.");
@@ -121,9 +127,10 @@ export default function AboutInfo() {
                 <div className="w-full flex flex-col gap-3 mb-2">
                     <h2 className="text-purple-700 text-3xl font-bold max-sm:text-2xl">What should we call you?</h2>
                     <div className={inputClass}>
-                        <h2 className="text-purple-700 text-base font-semibold flex-shrink-0">Name <Req /></h2>
+                        <label htmlFor="about-name" className="text-purple-700 text-base font-semibold flex-shrink-0">Name <Req /></label>
                         <input
                             ref={nameInputRef}
+                            id="about-name"
                             className="outline-none w-full h-full px-2 py-4 font-medium text-gray-600 bg-transparent"
                             type="text"
                             placeholder="Jane Doe"
@@ -136,9 +143,10 @@ export default function AboutInfo() {
                 <div className="w-full flex flex-col gap-3 mb-2">
                     <h2 className="text-purple-700 text-3xl font-bold max-sm:text-2xl">What is your profession?</h2>
                     <div className={inputClass}>
-                        <h2 className="text-purple-700 text-base font-semibold flex-shrink-0">Profession <Req /></h2>
+                        <label htmlFor="about-profession" className="text-purple-700 text-base font-semibold flex-shrink-0">Profession <Req /></label>
                         <input
                             ref={professionInputRef}
+                            id="about-profession"
                             className="outline-none w-full h-full px-2 py-4 font-medium text-gray-600 bg-transparent"
                             type="text"
                             placeholder="Full-Stack Developer"
@@ -153,6 +161,7 @@ export default function AboutInfo() {
                     <div className={inputClass}>
                         <textarea
                             ref={aboutInputRef}
+                            aria-label="About you"
                             onChange={e => { setAboutText(e.target.value); saveDraft(name, profession, e.target.value); }}
                             value={aboutText}
                             className="outline-none w-full h-full p-2 font-medium text-base text-gray-600 sm:max-h-52 min-h-40 max-sm:min-h-60 resize-none bg-transparent"
@@ -171,7 +180,7 @@ export default function AboutInfo() {
             </form>
 
             <section className="shadow shadow-purple-100 border border-purple-100 rounded-xl p-4 mr-12 max-sm:mr-0 bg-purple-50/70">
-                <h3 className="text-lg font-bold text-gray-700 mb-2">Tips for a great "About Me"</h3>
+                <h3 className="text-lg font-bold text-gray-700 mb-2">Tips for a great &quot;About Me&quot;</h3>
                 <ul className="space-y-1">
                     {[
                         "Highlight your unique skills and key achievements.",

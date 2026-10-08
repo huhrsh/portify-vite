@@ -4,11 +4,11 @@ import { db } from "../Firebase";
 import { useUser } from "../Context";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import UserDetails from "./UserDetails";
 
 export default function AdminDashboard() {
-    const { user, loading, setLoading } = useUser();
+    const { user, setLoading } = useUser();
     const [pendingUsers, setPendingUsers] = useState([]);
     const navigate = useNavigate()
     const [selectedUser, setSelectedUser] = useState()

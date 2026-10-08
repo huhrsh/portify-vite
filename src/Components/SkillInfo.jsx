@@ -4,6 +4,7 @@ import { useUser } from "../Context";
 import { toast } from "react-toastify";
 import { doc, updateDoc } from "firebase/firestore";
 import deleteImage from "../Assets/Images/cross-circle.png";
+import { updateRecord, updatePoint, addPoint as appendPoint, removePoint as deletePoint } from '../editorData';
 
 const EMPTY_SKILL = () => ({ heading: "", points: [""] });
 
@@ -18,52 +19,51 @@ export default function SkillInfo() {
         if (draftKey) {
             try {
                 const saved = JSON.parse(localStorage.getItem(draftKey));
-                if (saved?.length && JSON.stringify(saved) !== JSON.stringify(user.skills || [])) {
+                if (Array.isArray(saved) && JSON.stringify(saved) !== JSON.stringify(user.skills || [])) {
                     setHasDraft(true);
                     setSkills(saved);
                     return;
                 }
-            } catch {}
+            } catch { /* Browser draft storage may be unavailable. */ }
         }
-        if (user?.skills?.length) setSkills(user.skills);
+        setSkills(Array.isArray(user.skills) ? user.skills : [EMPTY_SKILL()]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const saveDraft = (data) => {
         if (!draftKey) return;
-        try { localStorage.setItem(draftKey, JSON.stringify(data)); } catch {}
+        try { localStorage.setItem(draftKey, JSON.stringify(data)); } catch { /* Browser draft storage may be unavailable. */ }
     };
 
     const clearDraft = () => {
-        if (draftKey) localStorage.removeItem(draftKey);
+        try { if (draftKey) localStorage.removeItem(draftKey); } catch { /* Browser draft storage may be unavailable. */ }
         setHasDraft(false);
     };
 
     const discardDraft = () => {
         clearDraft();
-        setSkills(user?.skills?.length ? user.skills : [EMPTY_SKILL()]);
+        setSkills(Array.isArray(user?.skills) ? user.skills : [EMPTY_SKILL()]);
         toast.info("Draft discarded.");
     };
 
     const clearAll = () => {
-        setSkills([EMPTY_SKILL()]);
-        clearDraft();
+        update([]);
         toast.info("Cleared. Save to apply.");
     };
 
-    const update = (data) => { setSkills(data); saveDraft(data); };
+    const update = (data) => { setSkills(data); saveDraft(data); setHasDraft(true); };
 
     const handleSkillChange = (index, field, value) => {
-        const n = [...skills]; n[index][field] = value; update(n);
+        update(updateRecord(skills, index, { [field]: value }));
     };
     const handlePointChange = (si, pi, value) => {
-        const n = [...skills]; n[si].points[pi] = value; update(n);
+        update(updatePoint(skills, si, 'points', pi, value));
     };
     const addSkill    = () => update([...skills, EMPTY_SKILL()]);
     const removeSkill = (i) => update(skills.filter((_, idx) => idx !== i));
-    const addPoint    = (si) => { const n = [...skills]; n[si].points.push(""); update(n); };
+    const addPoint    = (si) => update(appendPoint(skills, si, 'points'));
     const removePoint = (si, pi) => {
-        const n = [...skills]; n[si].points = n[si].points.filter((_, i) => i !== pi); update(n);
+        update(deletePoint(skills, si, 'points', pi));
     };
 
     const handleFormSubmit = async (e) => {
@@ -71,8 +71,8 @@ export default function SkillInfo() {
         setLoading(true);
         try {
             await updateDoc(doc(db, 'users', user.uid), { skills });
-            setUser({ ...user, skills });
             clearDraft();
+            setUser(current => ({ ...current, skills }));
             toast.success("Skills saved.");
         } catch {
             toast.error("Failed to save skills.");
@@ -107,7 +107,7 @@ export default function SkillInfo() {
 
                         <div className="border hover:shadow-md focus-within:shadow-md bg-white p-3 py-0 rounded-xl transition-all duration-200 flex w-full gap-3 items-center">
                             <span className="text-purple-700 text-base font-medium flex-shrink-0">Heading <span className="text-rose-400 font-medium text-base">*</span></span>
-                            <input type="text" value={skill.heading} placeholder="e.g. Programming Languages"
+                            <input type="text" aria-label={`Skill group ${si + 1} heading`} value={skill.heading} placeholder="e.g. Programming Languages"
                                 onChange={e => handleSkillChange(si, "heading", e.target.value)}
                                 className="outline-none w-full px-2 py-4 font-medium text-gray-600" required />
                         </div>
@@ -116,11 +116,10 @@ export default function SkillInfo() {
                             <span className="text-purple-700 text-base font-medium">Skills:</span>
                             {skill.points?.map((point, pi) => (
                                 <div key={pi} className="flex gap-2 items-center">
-                                    <input type="text" value={point} placeholder={`Skill ${pi + 1}`}
+                                    <input type="text" aria-label={`Skill ${pi + 1} in group ${si + 1}`} value={point} placeholder={`Skill ${pi + 1}`}
                                         onChange={e => handlePointChange(si, pi, e.target.value)}
                                         className="border hover:shadow-md focus:shadow-md rounded-xl outline-none w-full px-3 py-3 font-medium text-gray-600 transition-shadow" required />
-                                    <img src={deleteImage} alt="remove" onClick={() => removePoint(si, pi)}
-                                        className="w-8 h-8 flex-shrink-0 cursor-pointer hover:scale-110 transition-transform" />
+                                    <button type="button" aria-label={`Remove skill ${pi + 1} from group ${si + 1}`} onClick={() => removePoint(si, pi)}><img src={deleteImage} alt="" className="w-8 h-8 flex-shrink-0 hover:scale-110 transition-transform" /></button>
                                 </div>
                             ))}
                             <button type="button" onClick={() => addPoint(si)}

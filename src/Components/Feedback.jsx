@@ -108,7 +108,7 @@ export default function Feedback() {
                 <img className="w-5/12 max-sm:w-full max-sm:scale-110" src={feedback} alt="feedback" />
                 <div className="flex flex-col gap-6 max-sm:w-full">
                     <h1 className="text-4xl max-sm:text-2xl antialiased font-semibold text-transparent bg-gradient-to-tr from-violet-800 to-purple-500 bg-clip-text">
-                        We're eager to improve. <br />Share your thoughts with us!
+                        We&apos;re eager to improve. <br />Share your thoughts with us!
                     </h1>
                     <div className="flex p-4 px-6 min-h-48 rounded-3xl shadow-md gap-3 flex-col bg-white">
                         <StyledRating
